@@ -611,7 +611,10 @@ html[data-theme="light"] .card-menu-dropdown button:active {
 
 /* Utility Classes */
 .hidden {
-    display: none;
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 /* Mobile-specific adjustments */

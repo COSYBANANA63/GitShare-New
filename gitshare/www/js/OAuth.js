@@ -207,16 +207,22 @@ function fetchGitHubProfile(token) {
 function updateUIWithUserData(user) {
     console.log('Updating UI with user data...');
     
-    // Hide login button
+    // Hide login button first
     const githubLoginButton = document.getElementById("githubLoginButton");
     if (githubLoginButton) {
+        console.log('Hiding login button...');
         githubLoginButton.classList.add("hidden");
+        githubLoginButton.style.display = 'none'; // Force hide
+    } else {
+        console.error('Login button not found in DOM');
     }
     
     // Show and update profile card
     const githubProfileCard = document.getElementById("githubProfileCard");
     if (githubProfileCard) {
+        console.log('Showing profile card...');
         githubProfileCard.classList.remove("hidden");
+        githubProfileCard.style.display = 'block'; // Force show
         
         // Update profile information
         const profileImage = document.getElementById("profileImage");
@@ -245,6 +251,8 @@ function updateUIWithUserData(user) {
                 profileWebsite.textContent = "No website";
             }
         }
+    } else {
+        console.error('Profile card not found in DOM');
     }
     
     // Add user info to header
