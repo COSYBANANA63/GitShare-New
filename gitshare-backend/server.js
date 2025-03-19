@@ -10,8 +10,8 @@ app.use(cors());
 app.use(express.json());
 
 // GitHub OAuth configuration
-const GITHUB_CLIENT_ID = 'Ov23liXAudE8sQqd8pjF';
-const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET; // Set this in Render environment variables
+const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID; // Set this in Glitch environment variables
+const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET; // Set this in Glitch environment variables
 
 // Token exchange endpoint
 app.post('/exchange-code', async (req, res) => {

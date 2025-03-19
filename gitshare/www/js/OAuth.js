@@ -139,7 +139,7 @@ function handleOAuthCallback(url) {
 // Exchange authorization code for access token
 function exchangeCodeForToken(code) {
     console.log('Exchanging code for token...');
-    fetch('https://gitshare-backend.onrender.com/exchange-code', {
+    fetch('https://paper-cypress-cellar.glitch.me/exchange-code', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
