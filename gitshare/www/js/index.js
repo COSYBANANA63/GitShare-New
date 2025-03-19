@@ -116,13 +116,6 @@ function handleBackButton(e) {
 
 // Handle closing overlays and dialogs
 function handleOverlaysBack() {
-    // Check for open message dialog
-    const messageDialog = document.querySelector('.message-dialog');
-    if (messageDialog) {
-        closeMessageDialog();
-        return true;
-    }
-    
     // Check for open details card
     const detailsCard = document.getElementById('detailsCard');
     if (detailsCard && detailsCard.classList.contains('active')) {
@@ -412,12 +405,6 @@ function createSavedCard(profile) {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                     Delete
-                </button>
-                <button class="message-action" onclick="event.stopPropagation(); showMessageDialog(${profile.id}, '${profile.name}')">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="action-icon">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                    Messages
                 </button>
                 <button class="github-action" onclick="event.stopPropagation(); window.open('https://github.com/${profile.username}', '_blank')">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="action-icon">

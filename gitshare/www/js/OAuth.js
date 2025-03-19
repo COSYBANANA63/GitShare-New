@@ -126,7 +126,7 @@ function verifyUsername(username) {
 
 // Update UI with GitHub profile data
 function updateUIWithUserData(user) {
-    console.log('Updating UI with user data...');
+    console.log('Updating UI with user data...', user);
     
     // Hide login button
     const githubLoginButton = document.getElementById("githubLoginButton");
@@ -149,21 +149,48 @@ function updateUIWithUserData(user) {
         const profileLocation = document.getElementById("profileLocation");
         const profileWebsite = document.getElementById("profileWebsite");
         
-        if (profileImage) profileImage.src = user.avatar_url || "/api/placeholder/100/100";
-        if (profileName) profileName.textContent = user.name || user.login;
-        if (profileBio) profileBio.textContent = user.bio || "No bio available";
-        if (profileFollowers) profileFollowers.textContent = user.followers || 0;
-        if (profileFollowing) profileFollowing.textContent = user.following || 0;
-        if (profileRepos) profileRepos.textContent = user.public_repos || 0;
-        if (profileLocation) profileLocation.textContent = user.location || "Not specified";
+        // Update profile data with proper null checks
+        if (profileImage) {
+            profileImage.src = user.avatar_url || "/api/placeholder/100/100";
+            profileImage.onerror = function() {
+                this.src = "/api/placeholder/100/100";
+            };
+        }
+        
+        if (profileName) {
+            profileName.textContent = user.name || user.login || "GitHub User";
+        }
+        
+        if (profileBio) {
+            profileBio.textContent = user.bio || "No bio available";
+        }
+        
+        if (profileFollowers) {
+            profileFollowers.textContent = user.followers ? user.followers.toLocaleString() : "0";
+        }
+        
+        if (profileFollowing) {
+            profileFollowing.textContent = user.following ? user.following.toLocaleString() : "0";
+        }
+        
+        if (profileRepos) {
+            profileRepos.textContent = user.public_repos ? user.public_repos.toLocaleString() : "0";
+        }
+        
+        if (profileLocation) {
+            profileLocation.textContent = user.location || "Not specified";
+        }
         
         if (profileWebsite) {
             if (user.blog) {
-                profileWebsite.href = user.blog.startsWith("http") ? user.blog : `https://${user.blog}`;
+                const websiteUrl = user.blog.startsWith("http") ? user.blog : `https://${user.blog}`;
+                profileWebsite.href = websiteUrl;
                 profileWebsite.textContent = user.blog;
+                profileWebsite.target = "_blank";
             } else {
                 profileWebsite.href = "#";
                 profileWebsite.textContent = "No website";
+                profileWebsite.removeAttribute("target");
             }
         }
     }
@@ -178,7 +205,7 @@ function addUserToHeader(user) {
     const headerUserInfo = document.createElement("div");
     headerUserInfo.className = "header-user-info";
     headerUserInfo.innerHTML = `
-        <img src="${user.avatar_url}" alt="${user.login}" class="header-avatar">
+        <img src="${user.avatar_url}" alt="${user.login}" class="header-avatar" onerror="this.src='/api/placeholder/100/100'">
         <span class="header-username">${user.login}</span>
         <button id="logoutButton" class="change-profile-button" title="Logout">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">

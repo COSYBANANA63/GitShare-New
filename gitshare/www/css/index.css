@@ -488,7 +488,6 @@ body {
 /* Customize different action buttons */
 .card-menu-dropdown .share-action .action-icon,
 .card-menu-dropdown .delete-action .action-icon,
-.card-menu-dropdown .message-action .action-icon,
 .card-menu-dropdown .github-action .action-icon {
     color: var(--dark); /* Will be white in dark mode, black in light mode */
 }
@@ -515,14 +514,6 @@ body {
 
 html[data-theme="dark"] .github-action:hover {
     color: #ffffff; /* GitHub color in dark mode */
-}
-
-.card-menu-dropdown .message-action:hover {
-    color: #4caf50; /* Green for messages */
-}
-
-.card-menu-dropdown .message-action:hover .action-icon {
-    color: #4caf50;
 }
 
 .card-menu-dropdown .action-icon {
