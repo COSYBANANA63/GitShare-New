@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.example.gitshare" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>GitShare</name>
+    <description>An app integrated with github to search up users quickly, view their repositories, and share them with others. Along with all the other important features like easy downloading of a repository, a github link to redirect over to github to view, and so many more, chat with users whose profile you've saved and even view their profile. Share solutions to repositoriesm in chat, or simply discuss.</description>
+    <author email="tobyfemi55@gmail.com" href="https://cosybanana63.github.io">
+        IICARUSTUDIO
+    </author>
+    <preference name="SplashScreen" value="screen" />
+    <preference name="AutoHideSplashScreen" value="true" />
+    <preference name="FadeSplashScreenDuration" value="500" />
+    <preference name="AndroidWindowSplashScreenAnimatedIcon" value="resources/splash.png" />
+    <preference name="AndroidWindowSplashScreenBackgroundColor" value="#000000" />
+    <preference name="AndroidWindowSplashScreenDuration" value="2000" />
+    <preference name="loadUrlTimeoutValue" value="7000" />
+    <platform name="android">
+        <icon density="ldpi" src="resources/android/icon/drawable-ldpi-icon.png" />
+        <icon density="mdpi" src="resources/android/icon/drawable-mdpi-icon.png" />
+        <icon density="hdpi" src="resources/android/icon/drawable-hdpi-icon.png" />
+        <icon density="xhdpi" src="resources/android/icon/drawable-xhdpi-icon.png" />
+        <icon density="xxhdpi" src="resources/android/icon/drawable-xxhdpi-icon.png" />
+        <icon density="xxxhdpi" src="resources/android/icon/drawable-xxxhdpi-icon.png" />
+        <icon src="resources/android/icon/mdpi.png" density="mdpi" />
+        <icon src="resources/android/icon/hdpi.png" density="hdpi" />
+        <icon src="resources/android/icon/xhdpi.png" density="xhdpi" />
+        <icon src="resources/android/icon/xxhdpi.png" density="xxhdpi" />
+        <icon src="resources/android/icon/xxxhdpi.png" density="xxxhdpi" />
+        <config-file target="AndroidManifest.xml" parent="/manifest/application/activity[@android:name='MainActivity']">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="gitshare" android:host="oauth" />
+            </intent-filter>
+        </config-file>
+    </platform>
+    <content src="index.html" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+    <platform name="ios">
+        <allow-intent href="itms:*" />
+        <allow-intent href="itms-apps:*" />
+    </platform>
+    <plugin name="cordova-plugin-inappbrowser" spec="^4.0.0" />
+    <plugin name="cordova-plugin-network-information" spec="^3.0.0" />
+    <plugin name="cordova-plugin-x-socialsharing" spec="^6.0.4" />
+    <plugin name="cordova-sqlite-storage" spec="^6.0.0" />
+    <plugin name="cordova-support-android-plugin" spec="^4.0.0" />
+    <plugin name="es6-promise-plugin" spec="^4.2.2" />
+</widget>

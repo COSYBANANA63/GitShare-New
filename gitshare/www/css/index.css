@@ -1,0 +1,2174 @@
+:root {
+    /* Light theme variables (for toggle) */
+    --light-primary: #2563eb;
+    --light-primary-hover: #1d4ed8;
+    --light-secondary: #f3f4f6;
+    --light-dark: #1f2937;
+    --light-light: #ffffff;
+    --light-gray: #6b7280;
+    --light-light-gray: #e5e7eb;
+    --light-bg: #f9fafb;
+
+     /* Dark theme variables (default) */
+     --dark-primary: #3b82f6;
+     --dark-primary-hover: #60a5fa;
+     --dark-secondary: #374151;
+     --dark-dark: #f3f4f6;
+     --dark-light: #1f2937;
+     --dark-gray: #9ca3af;
+     --dark-light-gray: #4b5563;
+     --dark-bg: #111827;
+
+     /* Default to dark theme */
+    --primary: var(--dark-primary);
+    --primary-hover: var(--dark-primary-hover);
+    --secondary: var(--dark-secondary);
+    --dark: var(--dark-dark);
+    --light: var(--dark-light);
+    --gray: var(--dark-gray);
+    --light-gray: var(--dark-light-gray);
+    --bg: var(--dark-bg);
+    
+    --radius: 0.5rem;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+    --safe-area-inset-top: env(safe-area-inset-top);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--dark);
+    line-height: 1.5;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    padding-top: var(--safe-area-inset-top);
+    padding-bottom: var(--safe-area-inset-bottom);
+}
+
+.container {
+    padding: 1rem;
+    padding-top: max(1rem, var(--safe-area-inset-top));
+    padding-bottom: max(1rem, var(--safe-area-inset-bottom));
+}
+
+.t_h {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-top: 0.5rem;
+}
+
+.header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 1rem;
+    position: relative;
+    display: inline-block;
+}
+
+.header h1::after {
+    content: '';
+    position: absolute;
+    bottom: -0.375rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 3px;
+    background-color: var(--primary);
+    border-radius: 1.5px;
+}
+
+.search-container {
+    margin: 0 auto 1.5rem;
+    position: relative;
+}
+
+#githubSearch {
+    width: 100%;
+    height: 3rem;
+    padding: 0 1rem;
+    color: var(--dark);
+    padding-right: 5rem;
+    border: 1.5px solid var(--light-gray);
+    border-radius: 1.5rem;
+    font-size: 1rem;
+    transition: all 0.3s ease, backgroun-color 0.3s ease, color 0.3s ease;
+    background-color: var(--light);
+    -webkit-appearance: none;
+}
+
+#githubSearch:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+#githubSearch::placeholder {
+    color: var(--gray);
+}
+
+#searchButton {
+    position: absolute;
+    right: 0.25rem;
+    top: 50%;
+    transform: translateY(-50%) !important;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 1.25rem;
+    height: 2.5rem;
+    width: 4.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none;
+    padding: 0 !important;
+    line-height: 2.5rem;
+    outline: none !important;
+    user-select: none;
+}
+#searchButton:hover,
+#searchButton:active,
+#searchButton:focus {
+    background-color: var(--primary-hover);
+    outline: none;
+    padding: 0;
+}
+
+/* GitHub Profile Card Styles */
+.github-profile-card {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    background-color: var(--light);
+    border-radius: 1rem;
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    text-align: center;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.profile-image {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 1rem;
+    border: 3px solid var(--light);
+    box-shadow: 0 0 0 2px var(--primary);
+}
+
+.github-profile-card h2 {
+    margin: 0.5rem 0;
+    font-size: 1.25rem;
+    color: var(--dark);
+    font-weight: 700;
+}
+
+.github-profile-card .bio {
+    margin: 0.75rem 0;
+    font-size: 0.9375rem;
+    color: var(--gray);
+}
+
+.profile-stats {
+    display: flex;
+    justify-content: space-between;
+    margin: 1.25rem 0;
+    padding: 0.75rem;
+    transition: background-color 0.3s ease;
+    background-color: var(--secondary);
+    border-radius: var(--radius);
+}
+
+.stat-item {
+    text-align: center;
+    padding: 0 0.5rem;
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.stat-label {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gray);
+    margin-top: 0.25rem;
+}
+
+.profile-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1.25rem 0;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--gray);
+    font-size: 0.875rem;
+}
+
+.meta-item svg {
+    width: 16px;
+    height: 16px;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.github-profile-card a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+    word-break: break-word;
+}
+
+.action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.action-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.75rem;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+    -webkit-appearance: none;
+}
+
+.action-button svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.action-button:active {
+    transform: scale(0.98);
+}
+
+.action-button:hover,
+.action-button:active {
+    background-color: var(--primary-hover);
+}
+
+.action-button.secondary {
+    background-color: var(--secondary);
+    color: var(--dark);
+}
+
+.action-button.secondary:hover,
+.action-button.secondary:active {
+    background-color: var(--light-gray);
+}
+
+/* Saved Profiles Section */
+.saved-profiles {
+    margin-top: 2rem;
+}
+
+.section-title {
+    text-align: center;
+    font-size: 1.25rem;
+    color: var(--dark);
+    margin-bottom: 1.25rem;
+    position: relative;
+    display: inline-block;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -0.375rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 3px;
+    background-color: var(--primary);
+    border-radius: 1.5px;
+}
+
+.saved-cards {
+    /* position: relative; */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-top: 1.25rem;
+    justify-content: center;
+}
+
+.saved-card {
+    background-color: var(--light);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    height: 100%;
+    text-align: center;
+    transition:transform 0.15s ease, background-color 0.3s ease;
+}
+
+.saved-card:active {
+    transform: scale(0.98);
+}
+
+.saved-card img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 0.75rem;
+    border: 2px solid var(--light);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.saved-card h3 {
+    font-size: 0.9375rem;
+    margin: 0.25rem 0;
+    color: var(--dark);
+    font-weight: 600;
+    text-align: center;
+    word-break: break-word;
+    width: 100%;
+}
+
+.saved-card p {
+    margin: 0.375rem 0;
+    font-size: 0.75rem;
+    color: var(--gray);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    width: 100%;
+}
+
+.card-menu {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+}
+
+.menu-dots-button {
+    background: var(--secondary);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+}
+
+.menu-dots-button:hover {
+    background: var(--primary);
+}
+
+.menu-dots-button:hover .dots-icon {
+    color: var(--dark); /* Will be white in dark mode */
+}
+
+.menu-dots-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.dots-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--gray);
+    transform: rotate(90deg); /* Make dots vertical */
+}
+
+.card-menu-dropdown {
+    position: absolute;
+    top: 40px;
+    right: 0;
+    background: var(--light); /* Will be dark in dark mode, white in light mode */
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    width: 200px;
+    z-index: 20;
+    overflow: hidden;
+    border: 1px solid var(--light-gray);
+    animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card-menu-dropdown.hidden {
+    display: none;
+}
+
+.card-menu-dropdown button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    color: var(--dark); /* Will be white in dark mode, black in light mode */
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.card-menu-dropdown button:hover {
+    background-color: var(--secondary);
+}
+
+.card-menu-dropdown button:active {
+    background-color: var(--light-gray);
+}
+
+/* Add a subtle divider between items */
+.card-menu-dropdown button:not(:last-child) {
+    border-bottom: 1px solid var(--light-gray);
+}
+
+/* Customize different action buttons */
+.card-menu-dropdown .share-action .action-icon,
+.card-menu-dropdown .delete-action .action-icon,
+.card-menu-dropdown .message-action .action-icon,
+.card-menu-dropdown .github-action .action-icon {
+    color: var(--dark); /* Will be white in dark mode, black in light mode */
+}
+
+.card-menu-dropdown .share-action:hover {
+    color: var(--primary);
+}
+
+.card-menu-dropdown .share-action:hover .action-icon {
+    color: var(--primary);
+}
+
+.card-menu-dropdown .delete-action:hover {
+    color: #e53935; /* Red for delete */
+}
+
+.card-menu-dropdown .delete-action:hover .action-icon {
+    color: #e53935;
+}
+
+.card-menu-dropdown .github-action:hover {
+    color: #24292e; /* GitHub color in light mode */
+}
+
+html[data-theme="dark"] .github-action:hover {
+    color: #ffffff; /* GitHub color in dark mode */
+}
+
+.card-menu-dropdown .message-action:hover {
+    color: #4caf50; /* Green for messages */
+}
+
+.card-menu-dropdown .message-action:hover .action-icon {
+    color: #4caf50;
+}
+
+.card-menu-dropdown .action-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+/* For light mode - these styles are added by JavaScript when theme changes */
+html[data-theme="light"] .menu-dots-button {
+    background: var(--light-secondary);
+}
+
+html[data-theme="light"] .menu-dots-button:hover {
+    background: var(--light-primary);
+}
+
+html[data-theme="light"] .dots-icon {
+    color: var(--light-gray);
+}
+
+html[data-theme="light"] .card-menu-dropdown {
+    background: var(--light-light);
+    border-color: var(--light-light-gray);
+}
+
+html[data-theme="light"] .card-menu-dropdown button {
+    color: var(--light-dark);
+}
+
+html[data-theme="light"] .card-menu-dropdown button:not(:last-child) {
+    border-bottom-color: var(--light-light-gray);
+}
+
+html[data-theme="light"] .card-menu-dropdown .action-icon {
+    color: var(--light-dark);
+}
+
+html[data-theme="light"] .card-menu-dropdown button:hover {
+    background-color: var(--light-secondary);
+}
+
+html[data-theme="light"] .card-menu-dropdown button:active {
+    background-color: var(--light-light-gray);
+}
+
+.saved-card-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0.5rem 0;
+    font-size: 0.75rem;
+    color: var(--gray);
+    width: 100%;
+}
+
+.saved-card-stats strong {
+    color: var(--primary);
+}
+
+.saved-card button {
+    width: 100%;
+    padding: 0.5rem;
+    margin-top: auto;
+    background-color: var(--secondary);
+    color: var(--dark);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    -webkit-appearance: none;
+}
+
+.saved-card button:hover,
+.saved-card button:active {
+    background-color: var(--light-gray);
+}
+
+/* Utility Classes */
+.hidden {
+    display: none;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 360px) {
+    .saved-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .action-buttons {
+        grid-template-columns: 1fr;
+    }
+    
+    .profile-stats {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .stat-item {
+        flex-basis: 33.333%;
+        padding: 0.5rem 0;
+    }
+}
+
+/* Loading indicator */
+.loading {
+    display: none;
+    position: fixed;
+    pointer-events: none;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(var(--bg-rgb, 17, 24, 39), 0.8);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: background-color 0.3s ease;
+}
+
+.loading.active {
+    display: flex;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(37, 99, 235, 0.2);
+    border-radius: 50%;
+    border-top-color: var(--primary);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Status messages */
+.status-message {
+    position: fixed;
+    bottom: calc(1rem + var(--safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.75rem 1.25rem;
+    border-radius: 2rem;
+    background-color: #000000;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    white-space: nowrap;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status-message.active {
+    opacity: 1;
+}
+
+.status-message.visible {
+    bottom: 20px;
+}
+
+.status-message.success {
+    background-color: #10b981;
+}
+
+.status-message.error {
+    background-color: #ef4444;
+}
+
+.status-message.info {
+    background-color: #3b82f6;
+}
+
+/* Utility class */
+.hidden {
+    display: none !important;
+}
+
+/* Prevent overscroll and add momentum scrolling */
+html, body {
+    height: 100%;
+    width: 100%;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Active states for touch devices */
+input:active, button:active {
+    opacity: 0.8;
+}
+
+/* Details Card Styles */
+.details-card {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--light);
+    z-index: 100;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    padding: max(1rem, var(--safe-area-inset-top)) 1rem max(1rem, var(--safe-area-inset-bottom)) 1rem;
+    -webkit-overflow-scrolling: touch;
+}
+
+.details-card.active {
+    transform: translateY(0);
+}
+
+.details-header {
+    position: sticky;
+    top: 0;
+    background-color: var(--light);
+    padding: 1rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--light-gray);
+    margin-bottom: 1rem;
+    z-index: 10;
+    transition: background-color 0.3s ease;
+}
+
+.details-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--dark);
+}
+
+.close-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray);
+    transition: background-color 0.3s ease;
+}
+
+.close-button:hover,
+.close-button:active {
+    background-color: var(--secondary);
+}
+
+.close-button svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.details-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Repository list styles */
+.details-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.details-item {
+    background-color: var(--secondary);
+    border-radius: var(--radius);
+    padding: 1rem;
+    transition: transform 0.2s ease, background-color 0.3s ease;
+}
+
+.details-item:active {
+    transform: scale(0.99);
+}
+
+.details-item h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.125rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.details-item h3 a {
+    color: var(--primary);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.details-item p {
+    margin: 0.5rem 0;
+    font-size: 0.875rem;
+    color: var(--gray);
+}
+
+.details-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--gray);
+}
+
+.badge {
+    display: inline-block;
+    background-color: #f1f8ff;
+    color: #0366d6;
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-size: 12px;
+    margin-left: 8px;
+    border: 1px solid #c8e1ff;
+  }
+
+.language {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.language-dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+}
+
+.stars, .forks {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Star and Fork Button Styling */
+.star-action button, .fork-action button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #f6f8fa;
+    border: 1px solid rgba(27, 31, 36, 0.15);
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #24292f;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.star-action button:hover, .fork-action button:hover {
+    background-color: #e1e4e8;
+}
+
+.star-action button.starred {
+    background-color: #fff8c5;
+    border-color: rgba(27, 31, 36, 0.15);
+}
+
+.star-action button.starred:hover {
+    background-color: #f6e68a;
+}
+
+/* Star Details and Fork Details Styling */
+.star-details, .fork-details {
+    padding: 16px;
+}
+
+.star-header, .fork-header {
+    margin-bottom: 16px;
+}
+
+.star-header h3, .fork-header h3 {
+    margin-bottom: 4px;
+    font-size: 18px;
+}
+
+.stargazers-list, .forks-list {
+    margin-top: 20px;
+}
+
+.stargazers-list h4, .forks-list h4 {
+    margin-bottom: 12px;
+    font-size: 16px;
+}
+
+.user-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.user-name {
+    color: #0366d6;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.user-name:hover {
+    text-decoration: underline;
+}
+
+.updated {
+    margin-left: auto;
+}
+
+/* User grid styles */
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+}
+
+.user-item {
+    background-color: var(--secondary);
+    border-radius: var(--radius);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+.user-item:active {
+    transform: scale(0.95);
+}
+
+.user-item img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--light);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.user-info h3 {
+    margin: 0;
+    font-size: 0.875rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: calc(100% - 2rem);
+}
+
+.user-info a {
+    color: var(--gray);
+    transition: color 0.3s ease;
+}
+
+.user-info a:hover {
+    color: var(--primary);
+}
+
+.empty-message {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray);
+    font-style: italic;
+}
+
+/* Make profile stats clickable */
+.stat-item {
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.3s ease;
+    position: relative;
+}
+
+.stat-item:hover {
+    background-color: rgba(37, 99, 235, 0.1);
+}
+
+.stat-item:active {
+    transform: scale(0.95);
+}
+
+.stat-item::after {
+    content: '';
+    position: absolute;
+    bottom: -0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background-color: var(--primary);
+    transition: width 0.3s ease;
+}
+
+.stat-item:hover::after {
+    width: 60%;
+}
+
+.saved-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.share-button{
+    grid-column: 1;
+}
+
+.delete-button{
+    grid-column: 2;
+}
+
+.message-button{
+    grid-column: 1/3;
+}
+
+/* Action icon styles */
+.action-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* Button styles */
+.delete-button,
+.message-button,
+.share-button {
+    min-width: 0;
+    justify-content: center;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+/* Delete button */
+.delete-button {
+    background-color: #f44336;
+    color: white;
+}
+
+.delete-button:hover {
+    background-color: #d32f2f;
+}
+
+/* Share button */
+.share-button {
+    background-color: #2196F3;
+    color: white;
+}
+
+.share-button:hover {
+    background-color: #1976D2;
+}
+
+/* Message button */
+.message-button {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.message-button:hover {
+    background-color: #388E3C;
+}
+
+#githubProfileCard {
+    transition: opacity 0.3s ease;
+}
+
+/* Pagination controls */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 10px 0;
+}
+
+.pagination-button {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.pagination-button:hover {
+    background-color: #1976D2;
+}
+
+.pagination-button.disabled {
+    background-color: #9e9e9e;
+    cursor: not-allowed;
+}
+
+.page-indicator {
+    font-size: 14px;
+    color: var(--dark-gray);
+}
+
+/* Remove old share button styles if they conflict */
+.saved-card .share-button {
+    position: relative;
+    right: auto;
+    top: auto;
+    opacity: 1;
+}
+
+/* Theme toggle button */
+/* .theme-toggle {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background-color: var(--secondary);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--dark);
+    box-shadow: var(--shadow);
+    z-index: 100;
+    transition: background-color 0.3s ease, color 0.3s ease;
+} */
+
+.theme-toggle svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* Light theme class to toggle */
+.light-theme {
+    --primary: var(--light-primary);
+    --primary-hover: var(--light-primary-hover);
+    --secondary: var(--light-secondary);
+    --dark: var(--light-dark);
+    --light: var(--light-light);
+    --gray: var(--light-gray);
+    --light-gray: var(--light-light-gray);
+    --bg: var(--light-bg);
+}
+
+.light-theme .bio,
+.light-theme .meta-item,
+.light-theme .stat-label,
+.light-theme .saved-card p,
+.light-theme .saved-card-stats,
+.light-theme .details-meta,
+.light-theme .details-item p {
+    color: #4b5563 !important; /* Darker gray that's visible on light backgrounds */
+}
+
+.light-theme .stat-value {
+    color: var(--primary); /* Keep using primary color but ensure it's visible */
+}
+
+/* Additional fixes for other potentially problematic text elements */
+.light-theme .github-profile-card .bio {
+    color: #4b5563 !important;
+}
+
+.light-theme .profile-meta .meta-item {
+    color: #4b5563 !important;
+}
+
+.light-theme .saved-card .saved-card-stats {
+    color: #4b5563 !important;
+}
+
+/* Fix for repository details and stats */
+.light-theme .details-item .details-meta {
+    color: #4b5563 !important;
+}
+
+/* Force darker text in areas that might be using light colors */
+.light-theme [class*="gray"],
+.light-theme [class*="meta"],
+.light-theme [class*="bio"],
+.light-theme [class*="stats"] {
+    color: #4b5563 !important;
+}
+/* Alert overlay */
+.alert-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.alert-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Alert box */
+.alert-box {
+    width: 85%;
+    max-width: 300px;
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: scale(0.9);
+    transition: transform 0.3s;
+}
+
+.alert-overlay.visible .alert-box {
+    transform: scale(1);
+}
+
+/* Alert message */
+.alert-message {
+    margin: 0 0 20px 0;
+    font-size: 16px;
+    text-align: center;
+    color: #333;
+}
+
+/* Alert buttons container */
+.alert-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* Alert buttons */
+.alert-button {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.alert-button:active {
+    transform: scale(0.98);
+}
+
+.cancel-button {
+    background-color: #f1f2f6;
+    color: #333;
+}
+
+.confirm-button {
+    background-color: #e74c3c;
+    color: white;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .alert-box {
+        background-color: #1f2937;
+        border: 1px solid #374151;
+    }
+    
+    .alert-message {
+        color: #f9fafb;
+    }
+    
+    .cancel-button {
+        background-color: #374151;
+        color: #f9fafb;
+    }
+    
+    .confirm-button {
+        background-color: #e74c3c;
+    }
+}
+
+/* Connection error banner */
+.connection-error {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #e74c3c;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 9999;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.connection-error.active {
+    transform: translateY(0);
+}
+
+/* Theme toggle button */
+.theme-toggle {
+    /* position: fixed; */
+    top: 8px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--primary-color, #0366d6);
+    border: none;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
+}
+
+.theme-toggle .sun-icon {
+    display: none;
+}
+
+.theme-toggle .moon-icon {
+    display: block;
+}
+
+.theme-toggle.dark-mode .sun-icon {
+    display: block;
+}
+
+.theme-toggle.dark-mode .moon-icon {
+    display: none;
+}
+
+/* Dark theme styles */
+body.dark-theme {
+    --background-color: #121212;
+    --card-bg: #1e1e1e;
+    --text-color: #e6e6e6;
+    --status-color: #ffffff
+    --text-secondary: #b0b0b0;
+    --border-color: #333;
+    --primary-color: #2188ff;
+    --hover-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .container {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+body.dark-theme input,
+body.dark-theme button {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+body.dark-theme .github-card,
+body.dark-theme .saved-card {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+body.dark-theme #statusMessage {
+    background-color: var(--card-bg);
+    color: var(--status-color);
+}
+
+body.dark-theme .alert-box {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+body.dark-theme .alert-message {
+    color: var(--text-color);
+}
+
+body.dark-theme .cancel-button {
+    background-color: #333;
+    color: var(--text-color);
+}
+
+.app-header {
+    padding-right: 50px; 
+}
+
+
+/* GitHub username modal */
+.github-username-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--card-bg-color, white);
+    border-radius: 12px;
+    padding: 24px;
+    width: 80%;
+    max-width: 400px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 18px;
+    color: var(--text-color, #333);
+}
+
+#githubUsernameInput {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    margin-bottom: 16px;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.modal-buttons button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+#cancelUsernameButton {
+    background-color: #f1f1f1;
+    color: #333;
+}
+
+#submitUsernameButton {
+    background-color: #2563eb;
+    color: white;
+}
+
+/* Header user info styles */
+.header-user-info {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    padding: 0 10px;
+}
+
+.header-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.header-username {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.change-profile-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color);
+    margin-left: 8px;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.change-profile-button:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Loading indicator visibility */
+.loading.visible {
+    display: flex;
+}
+
+/* Star button styles */
+#toggleStarButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#toggleStarButton.starred {
+    background-color: #fff8e5;
+    border-color: #ffd960;
+    color: #7c6514;
+}
+
+#toggleStarButton:hover {
+    background-color: #e5e7eb;
+}
+
+#toggleStarButton.starred:hover {
+    background-color: #ffe9a6;
+}
+
+/* User list styling */
+.user-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.user-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.user-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+}
+
+.user-name {
+    text-decoration: none;
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.user-name:hover {
+    text-decoration: underline;
+}
+
+.fork-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.fork-date {
+    font-size: 0.75rem;
+    color: var(--gray);
+}
+
+/* Issue styling */
+.issues-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.issue-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--light-gray);
+    border-radius: 0.5rem;
+}
+
+.issue-icon {
+    color: #28a745;
+}
+
+.issue-icon.closed {
+    color: #cb2431;
+}
+
+.issue-content {
+    flex: 1;
+}
+
+.issue-title {
+    display: block;
+    font-weight: 500;
+    color: var(--text-color);
+    text-decoration: none;
+    margin-bottom: 0.25rem;
+}
+
+.issue-title:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.issue-meta {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--gray);
+    margin-bottom: 0.5rem;
+}
+
+.issue-labels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.issue-label {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 1rem;
+    color: white;
+    font-weight: 500;
+}
+
+/* Make the stat badges clickable */
+.stat-badge {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.stat-badge:hover {
+    background-color: var(--primary-light);
+}
+
+/* Button styling for actions */
+.button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.primary-button {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.primary-button:hover {
+    background-color: var(--primary-dark);
+}
+
+.secondary-button {
+    background-color: #f3f4f6;
+    color: var(--text-color);
+    border: 1px solid #d1d5db;
+}
+
+.secondary-button:hover {
+    background-color: #e5e7eb;
+}
+
+.fork-action, .issue-action {
+    display: flex;
+    gap: 0.75rem;
+    margin: 1rem 0;
+}
+
+/* Make stars/forks/issues clickable in repo list */
+.details-meta span {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.details-meta span:hover {
+    color: var(--primary-color);
+}
+
+/* Repository Details View */
+.repo-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.repo-header {
+    margin-bottom: 0.5rem;
+}
+
+.repo-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.stat-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--light-gray);
+    border-radius: 1rem;
+    font-size: 0.85rem;
+}
+
+.repo-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.repo-action-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.repo-action-button:hover {
+    background-color: var(--primary-dark);
+}
+
+.download-button {
+    background-color: var(--success-color);
+}
+
+.download-button:hover {
+    background-color: var(--success-dark);
+}
+
+.repo-tabs {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.tab-header {
+    display: flex;
+    background-color: var(--light-gray);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-button {
+    flex: 1;
+    padding: 0.75rem;
+    background: none;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.tab-button:not(:last-child) {
+    border-right: 1px solid var(--border-color);
+}
+
+.tab-button.active {
+    background-color: white;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.tab-content {
+    padding: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.tab-content.hidden {
+    display: none;
+}
+
+.readme-content {
+    white-space: pre-wrap;
+    line-height: 1.5;
+}
+
+.readme-placeholder {
+    color: var(--gray);
+    text-align: center;
+    padding: 2rem;
+}
+
+/* File list styling */
+.file-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.file-icon {
+    margin-right: 0.5rem;
+    color: var(--primary-color);
+}
+
+.file-name {
+    text-decoration: none;
+    color: var(--text-color);
+}
+
+/* Commit list styling */
+.commit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.commit-item {
+    display: flex;
+    padding: 0.75rem;
+    border: 1px solid var(--light-gray);
+    border-radius: 0.5rem;
+    align-items: center;
+}
+
+.commit-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    margin-right: 0.75rem;
+}
+
+.commit-details {
+    flex: 1;
+}
+
+.commit-message {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.commit-meta {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--gray);
+}
+
+.commit-sha {
+    color: var(--gray);
+    padding: 0.25rem;
+}
+
+/* Make repository cards interactive */
+.details-item {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.details-item:hover {
+    background-color: var(--light-gray);
+}
+
+ /* Message Dialog */
+ .message-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.message-dialog.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.message-dialog-content {
+    width: 90%;
+    max-width: 500px;
+    height: 80%;
+    max-height: 600px;
+    background-color: var(--bg-color);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.message-dialog.active .message-dialog-content {
+    transform: translateY(0);
+}
+
+.message-dialog-header {
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.message-dialog-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-color);
+}
+
+.message-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.loading-messages {
+    text-align: center;
+    padding: 20px;
+    color: var(--gray);
+}
+
+.no-messages {
+    text-align: center;
+    padding: 20px;
+    color: var(--gray);
+}
+
+.error-message {
+    text-align: center;
+    padding: 20px;
+    color: var(--error-color);
+}
+
+.message-item {
+    margin-bottom: 16px;
+    padding: 12px;
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    transition: opacity 0.3s ease;
+}
+
+.message-content {
+    margin-bottom: 8px;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.message-content a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.message-content a:hover {
+    text-decoration: underline;
+}
+
+.message-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--gray);
+}
+
+.delete-message-button {
+    background: none;
+    border: none;
+    color: var(--gray);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.delete-message-button:hover {
+    background-color: rgba(255, 0, 0, 0.1);
+    color: var(--error-color);
+}
+
+.message-input-container {
+    padding: 16px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 8px;
+}
+
+#messageInput {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    resize: none;
+    font-family: inherit;
+    font-size: 14px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    transition: border-color 0.2s ease;
+}
+
+#messageInput:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+#messageInput.shake {
+    animation: shake 0.5s;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+#sendMessageButton {
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+#sendMessageButton:hover {
+    background-color: var(--primary-hover);
+}
+
+#sendMessageButton:active {
+    transform: scale(0.95);
+}
+
+/* Message button for saved cards */
+.message-button {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.message-button:hover {
+    background-color: var(--hover-color);
+}
+
+/* For dark/light mode compatibility */
+@media (prefers-color-scheme: dark) {
+    .message-dialog-content {
+        background-color: #1e1e1e;
+    }
+    
+    .message-item {
+        background-color: #262626;
+    }
+    
+    #messageInput {
+        background-color: #262626;
+        color: #ffffff;
+    }
+}
