@@ -28,7 +28,7 @@ function onDeviceReady() {
         tx.executeSql(`
             CREATE TABLE IF NOT EXISTS github_profiles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT,
+                username TEXT UNIQUE,
                 name TEXT,
                 bio TEXT,
                 followers INTEGER,
@@ -42,15 +42,17 @@ function onDeviceReady() {
         `);
 
         //table for messages
-    tx.executeSql(`
-        CREATE TABLE IF NOT EXISTS profile_messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            profile_id INTEGER,
-            message TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (profile_id) REFERENCES github_profiles (id)
-        )
-    `);
+        tx.executeSql(`
+            CREATE TABLE IF NOT EXISTS profile_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                profile_id INTEGER,
+                sender_id INTEGER,
+                message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (profile_id) REFERENCES github_profiles (id),
+                FOREIGN KEY (sender_id) REFERENCES github_profiles (id)
+            )
+        `);
     }, (error) => {
         console.log('Error creating table:', error);
         showStatusMessage('Error initializing database');
@@ -333,64 +335,8 @@ function loadSavedProfiles() {
 function createSavedCard(profile) {
     const card = document.createElement('div');
     card.className = 'saved-card';
-    
-    // Main card click handler
-    card.addEventListener('click', function(event) {
-        // Prevent click from triggering if we clicked on the menu or its children
-        if (event.target.closest('.card-menu') || event.target.closest('.card-menu-dropdown')) {
-            return;
-        }
-        
-        // Add visual feedback
-        this.classList.add('card-active');
-        
-        // Get a fresh reference to the search input and profile card
-        const searchInput = document.getElementById('githubSearch');
-        const profileCard = document.getElementById('githubProfileCard');
-        
-        // Set the username in the search box
-        searchInput.value = profile.username;
-        
-        // Prepare the profile card
-        if (profileCard) {
-            // Reset transition properties
-            profileCard.style.transition = 'none';
-            profileCard.offsetHeight; // Force reflow
-            profileCard.style.transition = 'opacity 0.3s ease';
-            
-            // Start with opacity 0
-            profileCard.style.opacity = '0';
-            profileCard.classList.remove('hidden');
-        }
-        
-        // Fill in the profile data directly from our saved data to avoid API call
-        document.getElementById('profileImage').src = profile.profile_image;
-        document.getElementById('profileName').textContent = profile.name;
-        document.getElementById('profileBio').textContent = profile.bio;
-        document.getElementById('profileFollowers').textContent = profile.followers;
-        document.getElementById('profileFollowing').textContent = profile.following;
-        document.getElementById('profileRepos').textContent = profile.repos;
-        document.getElementById('profileLocation').textContent = profile.location;
-        document.getElementById('profileWebsite').href = profile.website;
-        document.getElementById('profileWebsite').textContent = profile.website !== '#' ? profile.website : 'No website';
-        
-        // Hide the save button for saved profiles
-        document.getElementById('saveProfile').style.display = 'none';
-        
-        // Use a short timeout to ensure the visual feedback is shown before transitioning
-        setTimeout(() => {
-            // Remove the active class
-            this.classList.remove('card-active');
-            
-            // Show the profile card with a smooth fade-in
-            if (profileCard) {
-                profileCard.style.opacity = '1';
-                
-                // Immediately scroll to the profile card
-                profileCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }, 150);
-    });
+    card.dataset.id = profile.id;
+    card.dataset.username = profile.username;
 
     // Create the card HTML structure
     card.innerHTML = `
@@ -413,27 +359,35 @@ function createSavedCard(profile) {
                     </svg>
                     Delete
                 </button>
-                <button class="message-action" onclick="event.stopPropagation(); showMessageDialog(${profile.id}, '${profile.name}')">
+                <button class="message-action" onclick="event.stopPropagation(); showMessageDialog(${profile.id}, '${profile.username}')">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="action-icon">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                     </svg>
-                    Messages
+                    Message
                 </button>
                 <button class="github-action" onclick="event.stopPropagation(); window.open('https://github.com/${profile.username}', '_blank')">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="action-icon">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                     </svg>
-                    Visit GitHub
+                    GitHub
                 </button>
             </div>
         </div>
-        <img src="${profile.profile_image}" alt="${profile.name}" loading="lazy">
-        <h3>${profile.name}</h3>
-        <p>${profile.bio}</p>
+        <img src="${profile.profile_image}" alt="${profile.username}'s profile" class="saved-card-image">
+        <h3>${profile.username}</h3>
+        <p>${profile.bio || 'No bio available'}</p>
         <div class="saved-card-stats">
-            <span><strong>${profile.followers}</strong> followers</span>
-            <span><strong>${profile.repos}</strong> repos</span>
+            <div><strong>${profile.followers}</strong> followers</div>
+            <div><strong>${profile.following}</strong> following</div>
+            <div><strong>${profile.repos}</strong> repos</div>
         </div>
+        <button class="view-profile-button" onclick="viewProfile('${profile.username}')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            View Profile
+        </button>
     `;
 
     return card;
@@ -1068,13 +1022,19 @@ function searchGitHubProfile() {
 
 // Function to show message dialog
 function showMessageDialog(profileId, profileName) {
+    const currentUser = localStorage.getItem("github_username");
+    if (!currentUser) {
+        showStatusMessage('Please sign in to send messages', 'error');
+        return;
+    }
+
     // Create a messaging dialog
     const messageDialog = document.createElement('div');
     messageDialog.className = 'message-dialog';
     messageDialog.innerHTML = `
         <div class="message-dialog-content">
             <div class="message-dialog-header">
-                <h3>Messages for ${profileName}</h3>
+                <h3>Messages with ${profileName}</h3>
                 <button class="close-button" onclick="closeMessageDialog()">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1083,12 +1043,11 @@ function showMessageDialog(profileId, profileName) {
                 </button>
             </div>
             <div class="message-list" id="messageList">
-                <!-- Messages will be loaded here -->
                 <div class="loading-messages">Loading messages...</div>
             </div>
             <div class="message-input-container">
                 <textarea id="messageInput" placeholder="Type a message..." rows="3"></textarea>
-                <button id="sendMessageButton" onclick="sendMessage(${profileId})">
+                <button id="sendMessageButton" onclick="sendMessage(${profileId}, '${currentUser}')">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
                         <line x1="22" y1="2" x2="11" y2="13"></line>
                         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -1097,7 +1056,7 @@ function showMessageDialog(profileId, profileName) {
             </div>
         </div>`;
     document.body.appendChild(messageDialog);
-    loadMessages(profileId);
+    loadMessages(profileId, currentUser);
 }
 
 // Function to close message dialog
@@ -1109,47 +1068,54 @@ function closeMessageDialog() {
 }
 
 // Function to load messages for a profile
-function loadMessages(profileId) {
+function loadMessages(profileId, currentUser) {
     const messageList = document.getElementById('messageList');
-    // Fetch messages from the database or API
-    fetch(`/api/messages?profileId=${profileId}`)
-        .then(response => response.json())
-        .then(messages => {
-            messageList.innerHTML = messages.map(message => `
-                <div class="message">
-                    <div class="message-content">${message.content}</div>
-                    <div class="message-timestamp">${new Date(message.timestamp).toLocaleString()}</div>
-                </div>`).join('');
-        })
-        .catch(error => {
-            console.error('Error loading messages:', error);
-            messageList.innerHTML = '<div class="error-loading-messages">Failed to load messages</div>';
-        });
-}
+    
+    db.transaction((tx) => {
+        tx.executeSql(
+            `SELECT m.*, p.username as sender_username 
+             FROM profile_messages m 
+             JOIN github_profiles p ON m.sender_id = p.id 
+             WHERE m.profile_id = ? 
+             ORDER BY m.created_at ASC`,
+            [profileId],
+            (tx, results) => {
+                if (results.rows.length === 0) {
+                    messageList.innerHTML = `
+                        <div class="no-messages">
+                            <p>No messages yet.</p>
+                            <p>Start a conversation with ${currentUser}!</p>
+                        </div>
+                    `;
+                    return;
+                }
 
-// Function to create a message element
-function createMessageElement(message) {
-    const messageElement = document.createElement('div');
-    messageElement.className = 'message-item';
-    
-    // Format the date
-    const messageDate = new Date(message.created_at);
-    const formattedDate = formatMessageDate(messageDate);
-    
-    messageElement.innerHTML = `
-        <div class="message-content">${formatMessageText(message.message)}</div>
-        <div class="message-footer">
-            <span class="message-time">${formattedDate}</span>
-            <button class="delete-message-button" onclick="deleteMessage(${message.id})">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Delete
-            </button>
-        </div>
-    `;
-    
-    return messageElement;
+                messageList.innerHTML = Array.from(results.rows).map(row => {
+                    const isCurrentUser = row.sender_username === currentUser;
+                    return `
+                        <div class="message-item ${isCurrentUser ? 'sent' : 'received'}">
+                            <div class="message-content">${formatMessageText(row.message)}</div>
+                            <div class="message-footer">
+                                <span class="message-time">${formatMessageDate(new Date(row.created_at))}</span>
+                                ${isCurrentUser ? `
+                                    <button class="delete-message-button" onclick="deleteMessage(${row.id})">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="12" height="12">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Delete
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            },
+            (error) => {
+                console.error('Error loading messages:', error);
+                messageList.innerHTML = '<div class="error-message">Failed to load messages</div>';
+            }
+        );
+    });
 }
 
 // Function to format message text (convert URLs to links, etc.)
@@ -1182,31 +1148,53 @@ function formatMessageDate(date) {
 }
 
 // Function to send a message
-function sendMessage(profileId) {
+function sendMessage(profileId, currentUser) {
     const messageInput = document.getElementById('messageInput');
-    const content = messageInput.value;
-    if (!content) return;
+    const content = messageInput.value.trim();
+    
+    if (!content) {
+        messageInput.classList.add('shake');
+        setTimeout(() => messageInput.classList.remove('shake'), 500);
+        return;
+    }
 
-    // Send message to the database or API
-    fetch('/api/sendMessage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileId, content })
-    })
-        .then(response => response.json())
-        .then(message => {
-            // Add the new message to the message list
-            const messageList = document.getElementById('messageList');
-            messageList.innerHTML += `
-                <div class="message">
-                    <div class="message-content">${message.content}</div>
-                    <div class="message-timestamp">${new Date(message.timestamp).toLocaleString()}</div>
-                </div>`;
-            messageInput.value = '';
-        })
-        .catch(error => {
-            console.error('Error sending message:', error);
-        });
+    db.transaction((tx) => {
+        // First get the sender's profile ID
+        tx.executeSql(
+            'SELECT id FROM github_profiles WHERE username = ?',
+            [currentUser],
+            (tx, results) => {
+                if (results.rows.length === 0) {
+                    showStatusMessage('Error: User profile not found', 'error');
+                    return;
+                }
+
+                const senderId = results.rows.item(0).id;
+
+                // Then insert the message
+                tx.executeSql(
+                    'INSERT INTO profile_messages (profile_id, sender_id, message) VALUES (?, ?, ?)',
+                    [profileId, senderId, content],
+                    (tx, results) => {
+                        if (results.insertId) {
+                            messageInput.value = '';
+                            messageInput.style.height = 'auto';
+                            loadMessages(profileId, currentUser);
+                            showStatusMessage('Message sent!', 'success');
+                        }
+                    },
+                    (error) => {
+                        console.error('Error sending message:', error);
+                        showStatusMessage('Failed to send message', 'error');
+                    }
+                );
+            },
+            (error) => {
+                console.error('Error finding sender:', error);
+                showStatusMessage('Error: User profile not found', 'error');
+            }
+        );
+    });
 }
 
 // Function to delete a message
@@ -1379,6 +1367,7 @@ function createRepoDetailsView(repo, readmeData, username) {
                     </svg>
                     <span>${repo.forks_count} forks</span>
                 </div>
+                
                 
                 <div class="stat-badge">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
