@@ -92,6 +92,7 @@ function onDeviceReady() {
     initializeRepositoryInteractions();
     // Add touch feedback
     addTouchFeedback();
+    monitorRateLimit();
 }
 
 // Handle back button press
@@ -685,6 +686,30 @@ function createReposList(repos, username) {
     `;
 }
 
+async function getMostUsedLanguage(username) {
+    try {
+        const response = await fetch(`https://api.github.com/users/${username}/repos?per_page=100`);
+        if (!response.ok) throw new Error('Failed to fetch repos');
+
+        const repos = await response.json();
+        const languageCount = {};
+
+        repos.forEach(repo => {
+            if (repo.language) {
+                languageCount[repo.language] = (languageCount[repo.language] || 0) + 1;
+            }
+        });
+
+        // Find the language with the highest count
+        const mostUsed = Object.entries(languageCount).sort((a, b) => b[1] - a[1])[0];
+        return mostUsed ? mostUsed[0] : null;
+
+    } catch (error) {
+        console.error('Error getting most used language:', error);
+        return null;
+    }
+}
+
 // Create HTML for users list (followers or following) with pagination
 function createUsersList(users, type, username) {
     if (users.length === 0) {
@@ -715,41 +740,35 @@ function createUsersList(users, type, username) {
 
     // Delay updating language info to ensure DOM is ready
     setTimeout(() => {
-        users.forEach(async (user) => {
+        users.forEach((user, index) => {
             const langElem = document.getElementById(`lang-${user.login}`);
-
             if (!langElem) return;
-
-            // Check if cached
-            if (languageCache[user.login]) {
-                const cachedLang = languageCache[user.login];
-                const color = getLanguageColor(cachedLang);
-                langElem.innerHTML = `
-                    <span class="language">
-                        <span class="language-dot" style="background-color: ${color}"></span>
-                        ${user.login} uses ${cachedLang}
-                    </span>
-                `;
-                return;
-            }
-
-            // Not cached? Fetch and cache it
-            const lang = await getMostUsedLanguage(user.login);
-            if (lang) {
-                languageCache[user.login] = lang;
-                const color = getLanguageColor(lang);
-                langElem.innerHTML = `
-                    <span class="language">
-                        <span class="language-dot" style="background-color: ${color}"></span>
-                        ${user.login} uses ${lang}
-                    </span>
-                `;
-            } else {
-                langElem.textContent = `${user.login} uses no language`;
-            }
+    
+            setTimeout(async () => {
+                // Check sessionStorage first
+                const cachedLangs = sessionStorage.getItem(`langs_${user.login}`);
+                if (cachedLangs) {
+                    const parsedLangs = JSON.parse(cachedLangs);
+                    langElem.innerHTML = formatLanguageList(user.login, parsedLangs);
+                    return;
+                }
+            
+                // Check in-memory cache
+                if (languageCache[user.login]) {
+                    langElem.innerHTML = formatLanguageList(user.login, languageCache[user.login]);
+                    return;
+                }
+            
+                // Fetch top languages from GitHub API
+                const topLangs = await getTopLanguages(user.login);
+                languageCache[user.login] = topLangs;
+                sessionStorage.setItem(`langs_${user.login}`, JSON.stringify(topLangs));  // Save to session
+            
+                langElem.innerHTML = formatLanguageList(user.login, topLangs);
+            }, index * 300);  // Stagger delay
         });
     }, 100);
-
+    
     return userCardsHTML;
 }
 
@@ -770,6 +789,7 @@ function formatLanguageList(username, languages) {
 
     return `<div class="language-list">${langsHTML}</div>`;
 }
+
 
 // Show details card with content
 function showDetailsCard(title, content) {
@@ -878,16 +898,18 @@ async function getTopLanguages(username) {
             }
         });
 
+        // Sort by most used languages
         const sortedLanguages = Object.entries(languageCount)
-            .sort((a, b) => b[1] - a[1])  // Sort by count descending
-            .slice(0, 3);  // Get top 3
+            .sort((a, b) => b[1] - a[1])  // Descending by count
+            .slice(0, 3);  // Top 3 only
 
-        return sortedLanguages;  // Array like [['JavaScript', 5], ['Python', 3], ...]
+        return sortedLanguages;  // Example: [['JavaScript', 5], ['Python', 3], ['HTML', 2]]
     } catch (error) {
-        console.error('Error getting top languages:', error);
+        console.error(`Error fetching top languages for ${username}:`, error);
         return [];
     }
 }
+
 
 
 // Global variable to track if an alert is currently showing
@@ -2030,4 +2052,65 @@ function initializeRepositoryInteractions() {
         // This helps in case the page is still loading
         setTimeout(attachToExistingRepoView, 1000);
     }
+}
+
+function monitorRateLimit() {
+    const rateLimitAlert = document.getElementById('rateLimitAlert') || createRateLimitAlert();
+
+    function checkLimit() {
+        fetch('https://api.github.com/rate_limit')
+            .then(res => res.json())
+            .then(data => {
+                const remaining = data.rate.remaining;
+                const limit = data.rate.limit;
+
+                const badge = document.getElementById('rateLimitBadge');
+                if (badge) {
+                    badge.textContent = `Rate Limit: ${remaining}/${limit}`;
+                    badge.classList.add('active');
+                }
+
+                if (remaining === 0) {
+                    // Rate limit hit – disable stuff
+                    rateLimitAlert.classList.add('active');
+                    rateLimitAlert.textContent = '⚠️ GitHub API Rate Limit Hit!';
+                    disableApiElements(true);
+                } else {
+                    // Rate limit free – enable stuff
+                    rateLimitAlert.classList.remove('active');
+                    rateLimitAlert.textContent = '';
+                    disableApiElements(false);
+                }
+            })
+            .catch(err => {
+                console.error('Rate limit check error:', err);
+            });
+    }
+
+    // Initial check + every 1 min
+    checkLimit();
+    setInterval(checkLimit, 60000);
+}
+
+function disableApiElements(disable) {
+    const apiButtons = document.querySelectorAll('#searchButton, .stat-item');  // Add selectors for your API-related buttons
+    apiButtons.forEach(btn => {
+        if (disable) {
+            btn.classList.add('disabled');
+            btn.disabled = true;
+        } else {
+            btn.classList.remove('disabled');
+            btn.disabled = false;
+        }
+    });
+}
+
+
+// Create alert banner if it doesn’t exist
+function createRateLimitAlert() {
+    const alert = document.createElement('div');
+    alert.id = 'rateLimitAlert';
+    alert.className = 'rate-limit-alert';
+    document.body.appendChild(alert);
+    return alert;
 }
