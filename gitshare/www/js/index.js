@@ -1,7 +1,7 @@
 document.addEventListener('deviceready', onDeviceReady, false);
 
 let db = null;
-
+const languageCache = {};  // Cache for most used languages
 function onDeviceReady() {
     console.log('Device is ready');
     
@@ -690,8 +690,8 @@ function createUsersList(users, type, username) {
     if (users.length === 0) {
         return `<p class="empty-message">No ${type}s found</p>`;
     }
-    
-    return `
+
+    let userCardsHTML = `
         <div class="users-grid">
             ${users.map(user => `
                 <div class="user-item" onclick="document.getElementById('githubSearch').value = '${user.login}'; searchGitHubProfile(); closeDetailsCard();">
@@ -706,11 +706,69 @@ function createUsersList(users, type, username) {
                             </svg>
                         </a>
                     </div>
+                    <div class="user-lang" id="lang-${user.login}">Loading language...</div>
                 </div>
             `).join('')}
         </div>
         ${createPaginationControls(currentPage, totalPages, username)}
     `;
+
+    // Delay updating language info to ensure DOM is ready
+    setTimeout(() => {
+        users.forEach(async (user) => {
+            const langElem = document.getElementById(`lang-${user.login}`);
+
+            if (!langElem) return;
+
+            // Check if cached
+            if (languageCache[user.login]) {
+                const cachedLang = languageCache[user.login];
+                const color = getLanguageColor(cachedLang);
+                langElem.innerHTML = `
+                    <span class="language">
+                        <span class="language-dot" style="background-color: ${color}"></span>
+                        ${user.login} uses ${cachedLang}
+                    </span>
+                `;
+                return;
+            }
+
+            // Not cached? Fetch and cache it
+            const lang = await getMostUsedLanguage(user.login);
+            if (lang) {
+                languageCache[user.login] = lang;
+                const color = getLanguageColor(lang);
+                langElem.innerHTML = `
+                    <span class="language">
+                        <span class="language-dot" style="background-color: ${color}"></span>
+                        ${user.login} uses ${lang}
+                    </span>
+                `;
+            } else {
+                langElem.textContent = `${user.login} uses no language`;
+            }
+        });
+    }, 100);
+
+    return userCardsHTML;
+}
+
+function formatLanguageList(username, languages) {
+    if (!languages || languages.length === 0) {
+        return `${username} uses no language`;
+    }
+
+    const langsHTML = languages.map(([lang, count]) => {
+        const color = getLanguageColor(lang);
+        return `
+            <span class="language">
+                <span class="language-dot" style="background-color: ${color}"></span>
+                ${lang} (${count})
+            </span>
+        `;
+    }).join('<br>');
+
+    return `<div class="language-list">${langsHTML}</div>`;
 }
 
 // Show details card with content
@@ -806,6 +864,31 @@ function getLanguageColor(language) {
     
     return colors[language] || '#8257e5'; // Default purple color
 }
+async function getTopLanguages(username) {
+    try {
+        const response = await fetch(`https://api.github.com/users/${username}/repos?per_page=100`);
+        if (!response.ok) throw new Error('Failed to fetch repos');
+
+        const repos = await response.json();
+        const languageCount = {};
+
+        repos.forEach(repo => {
+            if (repo.language) {
+                languageCount[repo.language] = (languageCount[repo.language] || 0) + 1;
+            }
+        });
+
+        const sortedLanguages = Object.entries(languageCount)
+            .sort((a, b) => b[1] - a[1])  // Sort by count descending
+            .slice(0, 3);  // Get top 3
+
+        return sortedLanguages;  // Array like [['JavaScript', 5], ['Python', 3], ...]
+    } catch (error) {
+        console.error('Error getting top languages:', error);
+        return [];
+    }
+}
+
 
 // Global variable to track if an alert is currently showing
 let alertIsVisible = false;

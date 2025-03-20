@@ -2282,4 +2282,16 @@ body.dark-theme .cancel-button {
     outline: none;
     border-color: var(--accent-color);
     box-shadow: 0 0 0 2px var(--accent-color-light);
+} 
+
+.user-lang {
+    font-size: 0.75rem;
+    color: var(--gray);
+    text-align: center;
 }
+.user-lang .language {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
