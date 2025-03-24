@@ -41,16 +41,25 @@ function onDeviceReady() {
             )
         `);
 
-        //table for messages
-    tx.executeSql(`
-        CREATE TABLE IF NOT EXISTS profile_messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            profile_id INTEGER,
-            message TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (profile_id) REFERENCES github_profiles (id)
-        )
-    `);
+       // Table for folders
+        tx.executeSql(`
+            CREATE TABLE IF NOT EXISTS profile_folders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE
+            )
+        `);
+
+        // Table to link profiles to folders
+        tx.executeSql(`
+            CREATE TABLE IF NOT EXISTS folder_profiles (
+                folder_id INTEGER,
+                profile_id INTEGER,
+                PRIMARY KEY (folder_id, profile_id),
+                FOREIGN KEY (folder_id) REFERENCES profile_folders (id),
+                FOREIGN KEY (profile_id) REFERENCES github_profiles (id)
+            )
+        `);
+
     }, (error) => {
         console.log('Error creating table:', error);
         showStatusMessage('Error initializing database');
@@ -59,8 +68,11 @@ function onDeviceReady() {
     });
 
     // Event listeners
-    document.getElementById('searchButton').addEventListener('click', searchGitHubProfile);
-    document.getElementById('saveProfile').addEventListener('click', saveGitHubProfile);
+    document.getElementById('searchButton').addEventListener('click', () => {
+        searchMode === 'user' ? searchGitHubProfile() : searchGitHubRepositories();
+    });
+
+        document.getElementById('saveProfile').addEventListener('click', saveGitHubProfile);
     document.getElementById('shareProfile').addEventListener('click', function() {
         shareGitHubProfile(document.getElementById('githubSearch').value.trim());
     });
@@ -79,12 +91,15 @@ function onDeviceReady() {
         showRepositories(username);
     });
     
+    document.getElementById('viewSavedReposButton').addEventListener('click', viewSavedRepos);
+
     // Add keyboard event for search input
     document.getElementById('githubSearch').addEventListener('keypress', function(event) {
-        if (event.key === 'Enter') {
-            searchGitHubProfile();
-        }
-    });
+    if (event.key === 'Enter') {
+        searchMode === 'user' ? searchGitHubProfile() : searchGitHubRepositories();
+    }
+});
+    
     // addMessageStyles();
     // addRepoDetailsStyles();
     setupNetworkMonitoring();
@@ -227,10 +242,67 @@ async function verifyImageURL(url) {
     }
 }
 
-// Save GitHub profile to database
 function saveGitHubProfile() {
+    // Ask user how they want to save
+    const saveOption = confirm("Do you want to save this profile into a folder?\nClick 'OK' for Folder, 'Cancel' for Normal Save.");
+    if (saveOption) {
+        // Save to folder
+        openFolderModal();
+    } else {
+        // Normal save
+        finalizeProfileSave(null);
+    }
+}
+
+function openFolderModal() {
+    loadFolderOptions();
+    document.getElementById('folderSaveModal').classList.remove('hidden');
+}
+
+function closeFolderModal() {
+    document.getElementById('folderSaveModal').classList.add('hidden');
+}
+
+function loadFolderOptions() {
+    const folderSelect = document.getElementById('folderSelect');
+    folderSelect.innerHTML = '';
+
+    db.transaction(tx => {
+        tx.executeSql('SELECT * FROM profile_folders ORDER BY name ASC', [], (tx, results) => {
+            for (let i = 0; i < results.rows.length; i++) {
+                const folder = results.rows.item(i);
+                const option = document.createElement('option');
+                option.value = folder.id;
+                option.textContent = folder.name;
+                folderSelect.appendChild(option);
+            }
+        });
+    });
+}
+
+function confirmFolderSave() {
+    const selectedFolderId = document.getElementById('folderSelect').value;
+    const newFolderName = document.getElementById('newFolderName').value.trim();
+
+    if (newFolderName) {
+        db.transaction(tx => {
+            tx.executeSql('INSERT OR IGNORE INTO profile_folders (name) VALUES (?)', [newFolderName], (tx, result) => {
+                const folderId = result.insertId || selectedFolderId;
+                finalizeProfileSave(folderId); // Save and link profile to folder
+            });
+        });
+    } else {
+        finalizeProfileSave(selectedFolderId); // Save and link to selected folder
+    }
+
+    closeFolderModal();
+}
+
+
+// Save GitHub profile to database
+function finalizeProfileSave(folderId) {
     showLoading();
-    
+
     const profile = {
         username: document.getElementById('githubSearch').value.trim(),
         name: document.getElementById('profileName').textContent,
@@ -258,11 +330,15 @@ function saveGitHubProfile() {
             profile.website,
             profile.profile_image
         ], (tx, results) => {
-            if (results.rowsAffected > 0) {
-                hideLoading();
-                showStatusMessage('Profile saved successfully');
-                loadSavedProfiles(); // Reload saved profiles
+            const profileId = results.insertId;
+
+            if (folderId) {
+                tx.executeSql(`INSERT INTO folder_profiles (folder_id, profile_id) VALUES (?, ?)`, [folderId, profileId]);
             }
+
+            hideLoading();
+            showStatusMessage('Profile saved successfully');
+            loadSavedProfiles();
         });
     }, (error) => {
         console.error('Error saving profile:', error);
@@ -270,6 +346,7 @@ function saveGitHubProfile() {
         showStatusMessage('Failed to save profile');
     });
 }
+
 
 // Delete a saved profile
 function deleteProfile(id) {
@@ -654,9 +731,9 @@ function createReposList(repos, username) {
     return `
         <div class="details-list">
             ${repos.map(repo => `
-                <div class="details-item">
+                <div class="details-item" onclick="showRepoDetails('${repo.owner.login}', '${repo.name}')">
                     <h3>
-                        <a href="${repo.html_url}" target="_blank">${repo.name}</a>
+                        <a href="${repo.html_url}" target="_blank" onclick="event.stopPropagation();">${repo.name}</a>
                         ${repo.fork ? '<span class="badge">Fork</span>' : ''}
                     </h3>
                     <p>${repo.description || 'No description available'}</p>
@@ -679,6 +756,7 @@ function createReposList(repos, username) {
                         </span>
                         <span class="updated">Updated ${formatDate(repo.updated_at)}</span>
                     </div>
+                        <button class="save-repo-btn action-button secondary" onclick="event.stopPropagation(); saveRepo('${repo.name}', '${repo.html_url}', '${repo.owner.login}')">Save Repo</button>
                 </div>
             `).join('')}
         </div>
@@ -720,19 +798,12 @@ function createUsersList(users, type, username) {
         <div class="users-grid">
             ${users.map(user => `
                 <div class="user-item" onclick="document.getElementById('githubSearch').value = '${user.login}'; searchGitHubProfile(); closeDetailsCard();">
-                    <img src="${user.avatar_url}" alt="${user.login}" loading="lazy">
-                    <div class="user-info">
-                        <h3>${user.login}</h3>
-                        <a href="${user.html_url}" target="_blank" onclick="event.stopPropagation();">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                                <polyline points="15 3 21 3 21 9"></polyline>
-                                <line x1="10" y1="14" x2="21" y2="3"></line>
-                            </svg>
-                        </a>
-                    </div>
+                    <img src="${user.avatar_url}" alt="${user.login}" loading="lazy" class="user-avatar">
+                    <div class="user-name">${user.login}</div>
+                    <a href="${user.html_url}" target="_blank" class="github-link" onclick="event.stopPropagation();">Visit GitHub</a>
                     <div class="user-lang" id="lang-${user.login}">Loading language...</div>
                 </div>
+
             `).join('')}
         </div>
         ${createPaginationControls(currentPage, totalPages, username)}
@@ -792,41 +863,33 @@ function formatLanguageList(username, languages) {
 
 
 // Show details card with content
-function showDetailsCard(title, content) {
+function showDetailsCard(title, content, loadMoreCallback = null) {
     let detailsCard = document.getElementById('detailsCard');
-    
-    // Create the card if it doesn't exist
     if (!detailsCard) {
         detailsCard = document.createElement('div');
         detailsCard.id = 'detailsCard';
         detailsCard.className = 'details-card';
         document.querySelector('.container').appendChild(detailsCard);
     }
-    
-    // Populate the card
+
     detailsCard.innerHTML = `
         <div class="details-header">
             <h2>${title}</h2>
-            <button class="close-button" onclick="closeDetailsCard()">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-            </button>
+            <button class="close-button" onclick="closeDetailsCard()">X</button>
         </div>
-        <div class="details-content">
-            ${content}
-        </div>
+        <div class="details-content">${content}</div>
+        ${loadMoreCallback ? '<button id="loadMoreRepos" class="action-button">Load More</button>' : ''}
     `;
-    
-    // Show with animation
+
+    if (loadMoreCallback) {
+        document.getElementById('loadMoreRepos').addEventListener('click', loadMoreCallback);
+    }
+
     setTimeout(() => {
         detailsCard.classList.add('active');
     }, 10);
-    
-    // Scroll to the card
-    detailsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
 
 // Close details card
 function closeDetailsCard() {
@@ -1348,83 +1411,160 @@ function deleteMessage(messageId) {
     );
 }
 
-function createReposList(repos, username) {
-    if (repos.length === 0) {
-        return '<p class="empty-message">No repositories found</p>';
-    }
-    
-    return `
-        <div class="details-list">
-            ${repos.map(repo => `
-                <div class="details-item" onclick="showRepoDetails('${username}', '${repo.name}')">
-                    <h3>
-                        <a href="#" onclick="event.stopPropagation();">${repo.name}</a>
-                        ${repo.fork ? '<span class="badge">Fork</span>' : ''}
-                    </h3>
-                    <p>${repo.description || 'No description available'}</p>
-                    <div class="details-meta">
-                        ${repo.language ? `<span class="language"><span class="language-dot" style="background-color: ${getLanguageColor(repo.language)}"></span>${repo.language}</span>` : ''}
-                        <span class="stars">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                            </svg>
-                            ${repo.stargazers_count}
-                        </span>
-                        <span class="forks">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
-                                <line x1="6" y1="3" x2="6" y2="15"></line>
-                                <circle cx="18" cy="6" r="3"></circle>
-                                <circle cx="6" cy="18" r="3"></circle>
-                                <path d="M18 9a9 9 0 0 1-9 9"></path>
-                            </svg>
-                            ${repo.forks_count}
-                        </span>
-                        <span class="updated">Updated ${formatDate(repo.updated_at)}</span>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-        ${createPaginationControls(currentPage, totalPages, username)}
-    `;
-}
-
+// Function to show repo details
 function showRepoDetails(username, repoName) {
     window.navigationStack.push({
-        type: 'profile',
-        username: username
+        type: 'repo',
+        username: username,
+        repoName: repoName
     });
 
     showLoading();
-    
 
-    // Fetch the repository details
+    // First fetch repository details
     fetch(`https://api.github.com/repos/${username}/${repoName}`)
         .then(response => {
             if (!response.ok) throw new Error('Failed to fetch repository details');
             return response.json();
         })
         .then(repo => {
-            // Fetch README content if available
+            // Create initial view without README
+            const detailsContent = createRepoDetailsView(repo, null, username);
+            showDetailsCard(`Repository: ${repo.name}`, detailsContent);
+
+            // Now fetch README separately
             return fetch(`https://api.github.com/repos/${username}/${repoName}/readme`)
                 .then(response => {
                     if (!response.ok) {
-                        // If README not found, return null
-                        return null;
+                        throw new Error('No README found');
                     }
                     return response.json();
                 })
-                .catch(() => null)
                 .then(readmeData => {
-                    // Create and show detailed repository view
-                    const detailsContent = createRepoDetailsView(repo, readmeData, username);
-                    showDetailsCard(`Repository: ${repo.name}`, detailsContent);
-                    hideLoading();
+                    // Update the README tab content
+                    const readmeTab = document.getElementById('readme-tab');
+                    if (readmeTab) {
+                        try {
+                            const decoded = atob(readmeData.content);
+                            readmeTab.innerHTML = `<div class="markdown-body">${marked.parse(decoded)}</div>`;
+                        } catch (e) {
+                            readmeTab.innerHTML = '<p class="readme-placeholder">Error loading README content.</p>';
+                        }
+                    }
+                })
+                .catch(() => {
+                    const readmeTab = document.getElementById('readme-tab');
+                    if (readmeTab) {
+                        readmeTab.innerHTML = '<p class="readme-placeholder">No README.md found.</p>';
+                    }
                 });
+        })
+        .then(() => {
+            // Load files and commits immediately
+            loadRepoFiles(username, repoName);
+            loadRepoCommits(username, repoName);
+            hideLoading();
         })
         .catch(error => {
             console.error('Error fetching repository details:', error);
             hideLoading();
             showStatusMessage('Failed to fetch repository details');
+        });
+}
+
+// Function to load repository files
+function loadRepoFiles(username, repoName) {
+    const filesTab = document.getElementById('files-tab');
+    if (!filesTab) return;
+
+    filesTab.innerHTML = '<div class="loading-files"><p>Loading files...</p></div>';
+    
+    fetch(`https://api.github.com/repos/${username}/${repoName}/contents`)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch repository files');
+            return response.json();
+        })
+        .then(files => {
+            let fileListHTML = '<div class="file-list">';
+            
+            // Sort: directories first, then files
+            files.sort((a, b) => {
+                if (a.type === 'dir' && b.type !== 'dir') return -1;
+                if (a.type !== 'dir' && b.type === 'dir') return 1;
+                return a.name.localeCompare(b.name);
+            });
+            
+            files.forEach(file => {
+                const isDir = file.type === 'dir';
+                fileListHTML += `
+                    <div class="file-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="file-icon">
+                            ${isDir 
+                                ? '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>' 
+                                : '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>'}
+                        </svg>
+                        <a href="${file.html_url}" target="_blank" class="file-name">${file.name}</a>
+                    </div>
+                `;
+            });
+            
+            fileListHTML += '</div>';
+            filesTab.innerHTML = fileListHTML;
+        })
+        .catch(error => {
+            console.error('Error loading repository files:', error);
+            filesTab.innerHTML = '<p class="error-message">Failed to load repository files. Please try again later.</p>';
+        });
+}
+
+// Function to load repository commits
+function loadRepoCommits(username, repoName) {
+    const commitsTab = document.getElementById('commits-tab');
+    if (!commitsTab) return;
+
+    commitsTab.innerHTML = '<div class="loading-commits"><p>Loading commit history...</p></div>';
+    
+    fetch(`https://api.github.com/repos/${username}/${repoName}/commits?per_page=10`)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch repository commits');
+            return response.json();
+        })
+        .then(commits => {
+            let commitListHTML = '<div class="commit-list">';
+            
+            commits.forEach(commit => {
+                const author = commit.author ? commit.author.login : (commit.commit.author ? commit.commit.author.name : 'Unknown');
+                const avatarUrl = commit.author ? commit.author.avatar_url : 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png';
+                const message = commit.commit.message;
+                const date = formatDate(commit.commit.author.date);
+                
+                commitListHTML += `
+                    <div class="commit-item">
+                        <img src="${avatarUrl}" alt="${author}" class="commit-avatar">
+                        <div class="commit-details">
+                            <div class="commit-message">${message.split('\n')[0]}</div>
+                            <div class="commit-meta">
+                                <span class="commit-author">${author}</span>
+                                <span class="commit-date">committed ${date}</span>
+                            </div>
+                        </div>
+                        <a href="${commit.html_url}" target="_blank" class="commit-sha">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                        </a>
+                    </div>
+                `;
+            });
+            
+            commitListHTML += '</div>';
+            commitsTab.innerHTML = commitListHTML;
+        })
+        .catch(error => {
+            console.error('Error loading repository commits:', error);
+            commitsTab.innerHTML = '<p class="error-message">Failed to load repository commits. Please try again later.</p>';
         });
 }
 
@@ -1440,8 +1580,9 @@ function createRepoDetailsView(repo, readmeData, username) {
         try {
             const decodedContent = atob(readmeData.content);
             // Very simple markdown rendering (just for demonstration)
-            readmeContent = `<div class="readme-content">${decodedContent.replace(/\n/g, '<br>')}</div>`;
-        } catch (e) {
+            const readmeHTML = marked.parse(decodedContent);
+            readmeContent = `<div class="markdown-body">${readmeHTML}</div>`;
+                    } catch (e) {
             console.error('Error decoding README content:', e);
             readmeContent = '<p class="readme-placeholder">Error loading README content.</p>';
         }
@@ -1509,7 +1650,7 @@ function createRepoDetailsView(repo, readmeData, username) {
                 
                 <a href="${downloadUrl}" target="_blank" class="repo-action-button download-button" onclick="trackDownload('${username}', '${repo.name}')">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
@@ -1524,20 +1665,14 @@ function createRepoDetailsView(repo, readmeData, username) {
                     <button class="tab-button" onclick="switchRepoTab(this, 'commits')">Commits</button>
                 </div>
                 
-                <div class="tab-content" id="readme-tab">
-                    ${readmeContent}
-                </div>
+                <div class="tab-content" id="readme-tab">${readmeContent}</div>
                 
                 <div class="tab-content hidden" id="files-tab">
-                    <div class="loading-files">
-                        <p>Loading files...</p>
-                    </div>
+                    <div class="loading-files"><p>Loading files...</p></div>
                 </div>
                 
                 <div class="tab-content hidden" id="commits-tab">
-                    <div class="loading-commits">
-                        <p>Loading commit history...</p>
-                    </div>
+                    <div class="loading-commits"><p>Loading commit history...</p></div>
                 </div>
             </div>
         </div>
@@ -1572,51 +1707,12 @@ function switchRepoTab(button, tabName) {
     }
 }
 
-// Function to load repository files
-function loadRepoFiles(username, repoName) {
-    const filesTab = document.getElementById('files-tab');
-    
-    fetch(`https://api.github.com/repos/${username}/${repoName}/contents`)
-        .then(response => {
-            if (!response.ok) throw new Error('Failed to fetch repository files');
-            return response.json();
-        })
-        .then(files => {
-            let fileListHTML = '<div class="file-list">';
-            
-            // Sort: directories first, then files
-            files.sort((a, b) => {
-                if (a.type === 'dir' && b.type !== 'dir') return -1;
-                if (a.type !== 'dir' && b.type === 'dir') return 1;
-                return a.name.localeCompare(b.name);
-            });
-            
-            files.forEach(file => {
-                const isDir = file.type === 'dir';
-                fileListHTML += `
-                    <div class="file-item">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="file-icon">
-                            ${isDir 
-                                ? '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>' 
-                                : '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>'}
-                        </svg>
-                        <a href="${file.html_url}" target="_blank" class="file-name">${file.name}</a>
-                    </div>
-                `;
-            });
-            
-            fileListHTML += '</div>';
-            filesTab.innerHTML = fileListHTML;
-        })
-        .catch(error => {
-            console.error('Error loading repository files:', error);
-            filesTab.innerHTML = '<p class="error-message">Failed to load repository files. Please try again later.</p>';
-        });
-}
-
 // Function to load repository commits
 function loadRepoCommits(username, repoName) {
     const commitsTab = document.getElementById('commits-tab');
+    if (!commitsTab) return;
+
+    commitsTab.innerHTML = '<div class="loading-commits"><p>Loading commit history...</p></div>';
     
     fetch(`https://api.github.com/repos/${username}/${repoName}/commits?per_page=10`)
         .then(response => {
@@ -2106,11 +2202,234 @@ function disableApiElements(disable) {
 }
 
 
-// Create alert banner if it doesn’t exist
+// Create alert banner if it doesn't exist
 function createRateLimitAlert() {
     const alert = document.createElement('div');
     alert.id = 'rateLimitAlert';
     alert.className = 'rate-limit-alert';
     document.body.appendChild(alert);
     return alert;
+}
+
+let repoSearchPage = 1;
+let repoSearchQuery = '';
+
+function searchGitHubRepositories(page = 1) {
+    const query = document.getElementById('githubSearch').value.trim();
+    if (!query) {
+        showStatusMessage('Enter a search term');
+        return;
+    }
+
+    if (page === 1) {
+        repoSearchQuery = query;
+    }
+
+    showLoading();
+    fetch(`https://api.github.com/search/repositories?q=${encodeURIComponent(repoSearchQuery)}&sort=stars&order=desc&per_page=10&page=${page}`)
+        .then(res => res.json())
+        .then(data => {
+            hideLoading();
+            if (data.items.length === 0 && page === 1) {
+                showStatusMessage('No repositories found');
+                return;
+            }
+
+            const reposHTML = createReposList(data.items, 'search', true);  // true for saving
+            showDetailsCard(`Repositories for "${repoSearchQuery}"`, reposHTML, () => {
+                repoSearchPage++;
+                searchGitHubRepositories(repoSearchPage);
+            });
+        })
+        .catch(err => {
+            hideLoading();
+            console.error('Error searching repositories:', err);
+            showStatusMessage('Failed to search repositories');
+        });
+}
+
+
+let searchMode = 'user';  // Default
+
+document.getElementById('userMode').addEventListener('click', () => {
+    searchMode = 'user';
+    setActiveModeButton('user');
+});
+
+document.getElementById('repoMode').addEventListener('click', () => {
+    searchMode = 'repo';
+    setActiveModeButton('repo');
+});
+
+function setActiveModeButton(mode) {
+    document.querySelectorAll('.mode-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+}
+
+// function saveRepo(name, url, owner) {
+//     const repoData = { name, url, owner };
+//     const savedRepos = JSON.parse(localStorage.getItem('savedRepos') || '[]');
+
+//     if (savedRepos.find(r => r.url === url)) {
+//         showStatusMessage('Repo already saved');
+//         return;
+//     }
+
+//     savedRepos.push(repoData);
+//     localStorage.setItem('savedRepos', JSON.stringify(savedRepos));
+//     showStatusMessage('Repository saved!');
+// }
+
+function saveRepo(name, url, owner) {
+    const savedRepos = JSON.parse(localStorage.getItem('savedRepos') || '[]');
+
+    // Avoid duplicates
+    if (savedRepos.some(repo => repo.url === url)) {
+        showStatusMessage('⚠️ Repository already saved');
+        return;
+    }
+
+    const repoData = { name, url, owner };
+    savedRepos.push(repoData);
+    localStorage.setItem('savedRepos', JSON.stringify(savedRepos));
+    showStatusMessage('✅ Repository saved!');
+}
+
+function viewSavedRepos() {
+    const savedRepos = JSON.parse(localStorage.getItem('savedRepos') || '[]');
+
+    if (savedRepos.length === 0) {
+        showStatusMessage('No saved repositories yet');
+        return;
+    }
+
+    const reposHTML = savedRepos.map(repo => `
+        <div class="details-item" onclick="showRepoDetails('${repo.owner}', '${repo.name}')">
+            <h3>
+                <a href="${repo.url}" target="_blank" onclick="event.stopPropagation();">${repo.name}</a>
+            </h3>
+            <p>Owner: ${repo.owner}</p>
+            <button class="action-button danger" onclick="event.stopPropagation(); deleteSavedRepo('${repo.url}'); viewSavedRepos();">Delete</button>
+        </div>
+    `).join('');
+
+    showDetailsCard('Saved Repositories', reposHTML);
+}
+
+function deleteSavedRepo(url) {
+    let savedRepos = JSON.parse(localStorage.getItem('savedRepos') || '[]');
+    savedRepos = savedRepos.filter(repo => repo.url !== url);
+    localStorage.setItem('savedRepos', JSON.stringify(savedRepos));
+    showStatusMessage('🗑️ Repository removed');
+}
+
+function loadSavedFolders() {
+    db.transaction(tx => {
+        tx.executeSql('SELECT * FROM profile_folders ORDER BY name ASC', [], (tx, results) => {
+            if (results.rows.length === 0) {
+                showStatusMessage('No folders created yet.');
+                return;
+            }
+
+            let folderHTML = '<div class="folder-container">';
+
+            const totalFolders = results.rows.length;
+
+            // Loop through folders
+            for (let i = 0; i < totalFolders; i++) {
+                const folder = results.rows.item(i);
+                const folderId = folder.id;
+                const folderName = folder.name;
+
+                tx.executeSql(`SELECT profile_image FROM github_profiles 
+                    JOIN folder_profiles ON github_profiles.id = folder_profiles.profile_id 
+                    WHERE folder_profiles.folder_id = ? LIMIT 4`, [folderId], (tx, profileResults) => {
+
+                    let avatarsHTML = '';
+                    for (let j = 0; j < profileResults.rows.length; j++) {
+                        const avatar = profileResults.rows.item(j).profile_image;
+                        avatarsHTML += `<img src="${avatar}" class="folder-avatar">`;
+                    }
+
+                    folderHTML += `
+                        <div class="folder-card" onclick="viewFolderProfiles(${folderId}, '${folderName}')">
+                            <div class="avatar-container">${avatarsHTML}</div>
+                            <div class="folder-name">${folderName}</div>
+                            <div class="dropdown">
+                                <button class="dropbtn">⋮</button>
+                                <div class="dropdown-content">
+                                    <a href="#" onclick="deleteFolder(event, ${folderId})">Delete</a>
+                                    <a href="#" onclick="shareFolder(event, ${folderId})">Share</a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Inject after final folder processed
+                    if (i === totalFolders - 1) {
+                        folderHTML += '</div>';
+                        showDetailsCard('Saved Folders', folderHTML);
+                    }
+                });
+            }
+        });
+    });
+}
+
+
+function viewFolderProfiles(folderId, folderName) {
+    db.transaction(tx => {
+        tx.executeSql(`SELECT * FROM github_profiles 
+            JOIN folder_profiles ON github_profiles.id = folder_profiles.profile_id 
+            WHERE folder_profiles.folder_id = ?`, [folderId], (tx, results) => {
+
+            if (results.rows.length === 0) {
+                showStatusMessage('No profiles in this folder.');
+                return;
+            }
+
+            let profilesHTML = '';
+            for (let i = 0; i < results.rows.length; i++) {
+                const profile = results.rows.item(i);
+                profilesHTML += `
+                    <div class="folder-profile-item">
+                        <img src="${profile.profile_image}" alt="${profile.username}">
+                        <h3>${profile.username}</h3>
+                        <a class="github-link" href="https://github.com/${profile.username}" target="_blank">Visit GitHub</a>
+                        <button class="action-button danger" onclick="removeUserFromFolder(${profile.id}, ${folderId});">Remove</button>
+                    </div>
+                `;
+            }
+
+            showDetailsCard(`Profiles in "${folderName}"`, profilesHTML);
+        });
+    });
+}
+
+function removeUserFromFolder(profileId, folderId) {
+    db.transaction(tx => {
+        tx.executeSql('DELETE FROM folder_profiles WHERE profile_id = ? AND folder_id = ?', [profileId, folderId], () => {
+            showStatusMessage('User removed from folder');
+            viewFolderProfiles(folderId); // Refresh the list
+        });
+    });
+}
+
+
+function deleteFolder(event, folderId) {
+    event.stopPropagation();
+    if (confirm("Delete this folder?")) {
+        db.transaction(tx => {
+            tx.executeSql('DELETE FROM profile_folders WHERE id = ?', [folderId]);
+            tx.executeSql('DELETE FROM folder_profiles WHERE folder_id = ?', [folderId], () => {
+                loadSavedFolders();
+                showStatusMessage('Folder deleted');
+            });
+        });
+    }
+}
+
+function shareFolder(event, folderId) {
+    event.stopPropagation();
+    alert('Share feature coming soon.');
 }

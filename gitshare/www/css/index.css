@@ -933,15 +933,31 @@ input:active, button:active {
 
 
 .user-avatar {
-    width: 32px;
-    height: 32px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--light);
+    box-shadow: 0 0 0 1px var(--primary);
 }
 
 .user-name {
-    color: #0366d6;
-    font-weight: 500;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: var(--dark);
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+.github-link {
+    font-size: 0.75rem;
+    color: var(--primary);
     text-decoration: none;
+    margin-top: 0.3rem;
+}
+
+.github-link:hover {
+    text-decoration: underline;
 }
 
 .user-name:hover {
@@ -1628,6 +1644,7 @@ body.dark-theme .cancel-button {
 }
 
 .header-username {
+    padding-top: 10px;
     font-size: 14px;
     font-weight: 500;
 }
@@ -2316,4 +2333,229 @@ body.dark-theme .cancel-button {
 .disabled {
     opacity: 0.5;
     pointer-events: none;
+}
+.search-mode-toggle {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    justify-content: flex-start;
+    flex-direction: row;
+}
+.mode-button {
+    white-space: nowrap;  /* Prevent wrapping */
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    background-color: transparent;
+    color: var(--primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.toggle-group{
+    display: flex;
+    gap: 0.5rem;
+}
+
+.toggle-divider {
+    width: 1px;
+    height: 24px;
+    background-color: var(--gray);
+}
+
+.mode-button.active {
+    background-color: var(--primary);
+    color: white;
+}
+
+
+.markdown-body {
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+    color: var(--dark);
+    background-color: var(--light);
+    padding: 1rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: auto;
+    font-size: 0.9rem;
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+    margin-top: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.markdown-body pre {
+    background-color: #2d2d2d;
+    color: #f8f8f2;
+    padding: 1rem;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+
+.markdown-body code {
+    background-color: #f6f8fa;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+
+.save-repo-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    border-radius: 999px;
+    background-color: rgb(25, 80, 246);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.save-repo-btn:hover {
+    background-color: var(--primary-hover);
+}
+
+.folder-modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.folder-modal-content {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 320px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+.folder-modal-content input,
+.folder-modal-content select,
+.folder-modal-content button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.folder-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.folder-card {
+    background-color: var(--secondary);
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+    text-align: center;
+    position: relative;
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+
+.folder-card:hover {
+    transform: scale(1.03);
+}
+
+.avatar-container {
+    display: flex;
+    justify-content: center;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.folder-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.folder-name {
+    font-size: 0.875rem;
+    color: var(--dark);
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.folder-card .dropdown {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+}
+
+.folder-card .dropbtn {
+    background: none;
+    border: none;
+    color: var(--gray);
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    min-width: 100px;
+    z-index: 10;
+    right: 0;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+.folder-profile-item img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 0.5rem;
+    border: 2px solid var(--light);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.folder-profile-item {
+    background-color: var(--secondary);
+    border-radius: var(--radius);
+    padding: 1rem;
+    text-align: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.folder-profile-item h3 {
+    font-size: 0.875rem;
+    color: var(--dark);
+    margin: 0;
+}
+
+.folder-profile-item .github-link {
+    font-size: 0.75rem;
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.folder-profile-item .github-link:hover {
+    text-decoration: underline;
 }
