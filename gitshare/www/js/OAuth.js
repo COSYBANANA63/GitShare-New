@@ -127,77 +127,39 @@ function verifyUsername(username) {
 // Update UI with GitHub profile data
 function updateUIWithUserData(user) {
     console.log('Updating UI with user data...', user);
-    
+
     // Hide login button
     const githubLoginButton = document.getElementById("githubLoginButton");
     if (githubLoginButton) {
         githubLoginButton.classList.add("hidden");
     }
-    
+
     // Show and update profile card
-    const githubProfileCard = document.getElementById("githubProfileCard");
-    if (githubProfileCard) {
-        githubProfileCard.classList.remove("hidden");
-        
-        // Update profile information
-        const profileImage = document.getElementById("profileImage");
-        const profileName = document.getElementById("profileName");
-        const profileBio = document.getElementById("profileBio");
-        const profileFollowers = document.getElementById("profileFollowers");
-        const profileFollowing = document.getElementById("profileFollowing");
-        const profileRepos = document.getElementById("profileRepos");
-        const profileLocation = document.getElementById("profileLocation");
-        const profileWebsite = document.getElementById("profileWebsite");
-        
-        // Update profile data with proper null checks
-        if (profileImage) {
-            profileImage.src = user.avatar_url || "/api/placeholder/100/100";
-            profileImage.onerror = function() {
-                this.src = "/api/placeholder/100/100";
-            };
+    document.getElementById("githubProfileCard").classList.remove("hidden");
+
+    document.getElementById("profileImage").src = user.avatar_url;
+    document.getElementById("profileName").textContent = user.name || user.login;
+    document.getElementById("profileBio").textContent = user.bio || "No bio available";
+    document.getElementById("profileFollowers").textContent = user.followers;
+    document.getElementById("profileFollowing").textContent = user.following;
+    document.getElementById("profileRepos").textContent = user.public_repos;
+    document.getElementById("profileLocation").textContent = user.location || "Not specified";
+    document.getElementById("profileWebsite").href = user.blog || "#";
+    document.getElementById("profileWebsite").textContent = user.blog || "No website";
+
+    // **Check if user is saved and hide "Save Profile" button**
+    isProfileSaved(user.login, (isSaved) => {
+        const saveProfileButton = document.getElementById('saveProfile');
+        if (isSaved) {
+            saveProfileButton.style.display = 'none';
+        } else {
+            saveProfileButton.style.display = 'block';
         }
-        
-        if (profileName) {
-            profileName.textContent = user.name || user.login || "GitHub User";
-        }
-        
-        if (profileBio) {
-            profileBio.textContent = user.bio || "No bio available";
-        }
-        
-        if (profileFollowers) {
-            profileFollowers.textContent = user.followers ? user.followers.toLocaleString() : "0";
-        }
-        
-        if (profileFollowing) {
-            profileFollowing.textContent = user.following ? user.following.toLocaleString() : "0";
-        }
-        
-        if (profileRepos) {
-            profileRepos.textContent = user.public_repos ? user.public_repos.toLocaleString() : "0";
-        }
-        
-        if (profileLocation) {
-            profileLocation.textContent = user.location || "Not specified";
-        }
-        
-        if (profileWebsite) {
-            if (user.blog) {
-                const websiteUrl = user.blog.startsWith("http") ? user.blog : `https://${user.blog}`;
-                profileWebsite.href = websiteUrl;
-                profileWebsite.textContent = user.blog;
-                profileWebsite.target = "_blank";
-            } else {
-                profileWebsite.href = "#";
-                profileWebsite.textContent = "No website";
-                profileWebsite.removeAttribute("target");
-            }
-        }
-    }
-    
-    // Add user info to header
+    });
+
     addUserToHeader(user);
 }
+
 
 // Add user info to header
 function addUserToHeader(user) {

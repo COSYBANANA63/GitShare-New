@@ -1,0 +1,1 @@
+{"plugins":["cordova-plugin-customurlscheme","cordova-plugin-inappbrowser","cordova-plugin-network-information","cordova-plugin-x-socialsharing","es6-promise-plugin","cordova-sqlite-storage","cordova-support-android-plugin"]}

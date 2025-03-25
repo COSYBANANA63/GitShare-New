@@ -1,34 +1,58 @@
 document.addEventListener('deviceready', onDeviceReady, false);
+class RequestQueue {
+    constructor(maxConcurrent = 5) {
+        this.queue = [];
+        this.activeCount = 0;
+        this.maxConcurrent = maxConcurrent;
+    }
 
+    enqueue(requestFn) {
+        return new Promise((resolve) => {
+            this.queue.push({ fn: requestFn, resolve });
+            this.processQueue();
+        });
+    }
+
+    async processQueue() {
+        if (this.activeCount >= this.maxConcurrent || this.queue.length === 0) return;
+
+        this.activeCount++;
+        const { fn, resolve } = this.queue.shift();
+        try {
+            const result = await fn();
+            resolve(result);
+        } catch (error) {
+            resolve([]); // Fallback to empty array on error
+        }
+        this.activeCount--;
+        this.processQueue();
+    }
+}
+
+const apiQueue = new RequestQueue(5); // Limit to 5 concurrent requests
 let db = null;
 const languageCache = {};  // Cache for most used languages
+
 function onDeviceReady() {
     console.log('Device is ready');
     
-    // back button event handler
     document.addEventListener("backbutton", handleBackButton, false);
-
-    // Initialize navigation history stack...obob i don tire
     window.navigationStack = [];
 
-    // Add status bar padding if available
     if (window.StatusBar) {
         StatusBar.styleDefault();
-        // document.body.classList.add('has-status-bar');
     }
 
-    // Initialize SQLite database
     db = window.sqlitePlugin.openDatabase({
         name: 'githubcards.db',
         location: 'default'
     });
 
-    // Create table for saved GitHub profiles
     db.transaction((tx) => {
         tx.executeSql(`
             CREATE TABLE IF NOT EXISTS github_profiles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT,
+                username TEXT UNIQUE,
                 name TEXT,
                 bio TEXT,
                 followers INTEGER,
@@ -40,16 +64,12 @@ function onDeviceReady() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-
-       // Table for folders
         tx.executeSql(`
             CREATE TABLE IF NOT EXISTS profile_folders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE
             )
         `);
-
-        // Table to link profiles to folders
         tx.executeSql(`
             CREATE TABLE IF NOT EXISTS folder_profiles (
                 folder_id INTEGER,
@@ -59,20 +79,45 @@ function onDeviceReady() {
                 FOREIGN KEY (profile_id) REFERENCES github_profiles (id)
             )
         `);
-
+        tx.executeSql(`
+            CREATE TABLE IF NOT EXISTS user_languages (
+                username TEXT PRIMARY KEY,
+                languages TEXT,  -- JSON string of top 3 languages
+                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
     }, (error) => {
         console.log('Error creating table:', error);
         showStatusMessage('Error initializing database');
     }, () => {
-        loadSavedProfiles(); // Load saved profiles on startup
+        loadSavedProfiles();
+        // Check for OAuth token and load user profile
+        const token = localStorage.getItem('github_oauth_token');
+        if (token) {
+            fetch('https://api.github.com/user', {
+                headers: { 'Authorization': `token ${token}` }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch user');
+                return response.json();
+            })
+            .then(data => {
+                const username = data.login;
+                document.getElementById('githubSearch').value = username;
+                searchGitHubProfile(); // Load the profile card
+            })
+            .catch(error => {
+                console.error('Error fetching user with OAuth token:', error);
+                showStatusMessage('Failed to load your profile');
+            });
+        }
     });
 
-    // Event listeners
+    // Event listeners (unchanged)
     document.getElementById('searchButton').addEventListener('click', () => {
         searchMode === 'user' ? searchGitHubProfile() : searchGitHubRepositories();
     });
-
-        document.getElementById('saveProfile').addEventListener('click', saveGitHubProfile);
+    document.getElementById('saveProfile').addEventListener('click', saveGitHubProfile);
     document.getElementById('shareProfile').addEventListener('click', function() {
         shareGitHubProfile(document.getElementById('githubSearch').value.trim());
     });
@@ -80,32 +125,23 @@ function onDeviceReady() {
         const username = document.getElementById('githubSearch').value.trim();
         showFollowers(username);
     });
-    
     document.querySelector('.stat-item:nth-child(2)').addEventListener('click', function() {
         const username = document.getElementById('githubSearch').value.trim();
         showFollowing(username);
     });
-    
     document.querySelector('.stat-item:nth-child(3)').addEventListener('click', function() {
         const username = document.getElementById('githubSearch').value.trim();
         showRepositories(username);
     });
-    
     document.getElementById('viewSavedReposButton').addEventListener('click', viewSavedRepos);
-
-    // Add keyboard event for search input
     document.getElementById('githubSearch').addEventListener('keypress', function(event) {
-    if (event.key === 'Enter') {
-        searchMode === 'user' ? searchGitHubProfile() : searchGitHubRepositories();
-    }
-});
-    
-    // addMessageStyles();
-    // addRepoDetailsStyles();
+        if (event.key === 'Enter') {
+            searchMode === 'user' ? searchGitHubProfile() : searchGitHubRepositories();
+        }
+    });
+
     setupNetworkMonitoring();
-    // addInteractionStyles();
     initializeRepositoryInteractions();
-    // Add touch feedback
     addTouchFeedback();
     monitorRateLimit();
 }
@@ -254,19 +290,50 @@ function saveGitHubProfile() {
     }
 }
 
-function openFolderModal() {
+function openFolderModal(profileId) {
     loadFolderOptions();
-    document.getElementById('folderSaveModal').classList.remove('hidden');
+    const modal = document.getElementById('folderSaveModal');
+    modal.classList.remove('hidden');
+    modal.dataset.profileId = profileId; // Store profileId
+    attachModalEventListeners(profileId); // Attach listeners
 }
 
 function closeFolderModal() {
-    document.getElementById('folderSaveModal').classList.add('hidden');
+    const modal = document.getElementById('folderSaveModal');
+    modal.classList.add('hidden');
+    console.log('Modal closed');
+}
+
+function attachModalEventListeners(profileId) {
+    const modal = document.getElementById('folderSaveModal');
+    const saveButton = modal.querySelector('.save-folder-btn'); // Use a class instead of onclick
+    const cancelButton = modal.querySelector('.cancel-folder-btn'); // Use a class
+
+    // Remove existing listeners to avoid duplicates
+    if (saveButton) {
+        saveButton.removeEventListener('click', confirmFolderSaveHandler);
+        saveButton.addEventListener('click', () => {
+            console.log('Save button clicked for profileId:', profileId);
+            confirmFolderSaveHandler(profileId);
+        });
+    } else {
+        console.error('Save button not found in modal');
+    }
+
+    if (cancelButton) {
+        cancelButton.removeEventListener('click', closeFolderModal);
+        cancelButton.addEventListener('click', () => {
+            console.log('Cancel button clicked');
+            closeFolderModal();
+        });
+    } else {
+        console.error('Cancel button not found in modal');
+    }
 }
 
 function loadFolderOptions() {
     const folderSelect = document.getElementById('folderSelect');
     folderSelect.innerHTML = '';
-
     db.transaction(tx => {
         tx.executeSql('SELECT * FROM profile_folders ORDER BY name ASC', [], (tx, results) => {
             for (let i = 0; i < results.rows.length; i++) {
@@ -276,28 +343,90 @@ function loadFolderOptions() {
                 option.textContent = folder.name;
                 folderSelect.appendChild(option);
             }
+        }, (error) => {
+            console.error('Error loading folder options:', error);
+            showStatusMessage('Failed to load folders');
         });
     });
 }
 
-function confirmFolderSave() {
+function confirmFolderSaveHandler(profileId) {
     const selectedFolderId = document.getElementById('folderSelect').value;
     const newFolderName = document.getElementById('newFolderName').value.trim();
 
-    if (newFolderName) {
-        db.transaction(tx => {
-            tx.executeSql('INSERT OR IGNORE INTO profile_folders (name) VALUES (?)', [newFolderName], (tx, result) => {
-                const folderId = result.insertId || selectedFolderId;
-                finalizeProfileSave(folderId); // Save and link profile to folder
-            });
-        });
-    } else {
-        finalizeProfileSave(selectedFolderId); // Save and link to selected folder
+    if (!profileId) {
+        showStatusMessage('Error: No profile selected');
+        console.error('No profileId provided');
+        return;
     }
 
-    closeFolderModal();
-}
+    console.log('Saving profileId:', profileId, 'to folderId:', selectedFolderId || 'new folder:', newFolderName);
 
+    db.transaction(tx => {
+        if (selectedFolderId) {
+            tx.executeSql(
+                'SELECT * FROM folder_profiles WHERE folder_id = ? AND profile_id = ?',
+                [selectedFolderId, profileId],
+                (tx, results) => {
+                    if (results.rows.length > 0) {
+                        showStatusMessage('Profile already exists in this folder');
+                        closeFolderModal();
+                    } else {
+                        tx.executeSql(
+                            'INSERT OR IGNORE INTO folder_profiles (folder_id, profile_id) VALUES (?, ?)',
+                            [selectedFolderId, profileId],
+                            () => {
+                                showStatusMessage('Added to folder successfully');
+                                console.log('Profile added to folder:', selectedFolderId);
+                                closeFolderModal();
+                                loadSavedProfiles(); // Refresh view
+                            },
+                            (error) => {
+                                console.error('Error adding to folder:', error);
+                                showStatusMessage('Failed to add to folder: ' + error.message);
+                            }
+                        );
+                    }
+                },
+                (error) => {
+                    console.error('Error checking folder_profiles:', error);
+                    showStatusMessage('Error checking folder: ' + error.message);
+                }
+            );
+        }
+
+        if (newFolderName) {
+            tx.executeSql(
+                'INSERT OR IGNORE INTO profile_folders (name) VALUES (?)',
+                [newFolderName],
+                (tx, result) => {
+                    const newFolderId = result.insertId;
+                    tx.executeSql(
+                        'INSERT OR IGNORE INTO folder_profiles (folder_id, profile_id) VALUES (?, ?)',
+                        [newFolderId, profileId],
+                        () => {
+                            showStatusMessage('Created new folder and added profile');
+                            console.log('New folder created:', newFolderId);
+                            closeFolderModal();
+                            loadSavedProfiles(); // Refresh view
+                        },
+                        (error) => {
+                            console.error('Error adding to new folder:', error);
+                            showStatusMessage('Failed to add to new folder: ' + error.message);
+                        }
+                    );
+                },
+                (error) => {
+                    console.error('Error creating folder:', error);
+                    showStatusMessage('Failed to create folder: ' + error.message);
+                }
+            );
+        }
+    }, (error) => {
+        console.error('Transaction error:', error);
+        showStatusMessage('Transaction failed: ' + error.message);
+    });
+}
 
 // Save GitHub profile to database
 function finalizeProfileSave(folderId) {
@@ -316,34 +445,73 @@ function finalizeProfileSave(folderId) {
     };
 
     db.transaction((tx) => {
-        tx.executeSql(`
-            INSERT INTO github_profiles (username, name, bio, followers, following, repos, location, website, profile_image)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-            profile.username,
-            profile.name,
-            profile.bio,
-            profile.followers,
-            profile.following,
-            profile.repos,
-            profile.location,
-            profile.website,
-            profile.profile_image
-        ], (tx, results) => {
-            const profileId = results.insertId;
-
-            if (folderId) {
-                tx.executeSql(`INSERT INTO folder_profiles (folder_id, profile_id) VALUES (?, ?)`, [folderId, profileId]);
+        // Check if profile already exists
+        tx.executeSql(
+            'SELECT id FROM github_profiles WHERE username = ?',
+            [profile.username],
+            (tx, results) => {
+                if (results.rows.length > 0) {
+                    // Profile already exists
+                    const profileId = results.rows.item(0).id;
+                    if (folderId) {
+                        // If saving to a folder, link existing profile
+                        tx.executeSql(
+                            'INSERT OR IGNORE INTO folder_profiles (folder_id, profile_id) VALUES (?, ?)',
+                            [folderId, profileId],
+                            () => {
+                                hideLoading();
+                                showStatusMessage('Profile already saved, linked to folder');
+                                loadSavedProfiles();
+                            },
+                            (error) => {
+                                console.error('Error linking to folder:', error);
+                                hideLoading();
+                                showStatusMessage('Failed to link to folder');
+                            }
+                        );
+                    } else {
+                        hideLoading();
+                        showStatusMessage('Profile already saved');
+                    }
+                } else {
+                    // Insert new profile
+                    tx.executeSql(`
+                        INSERT INTO github_profiles (username, name, bio, followers, following, repos, location, website, profile_image)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        profile.username,
+                        profile.name,
+                        profile.bio,
+                        profile.followers,
+                        profile.following,
+                        profile.repos,
+                        profile.location,
+                        profile.website,
+                        profile.profile_image
+                    ], (tx, results) => {
+                        const profileId = results.insertId;
+                        if (folderId) {
+                            tx.executeSql(
+                                'INSERT INTO folder_profiles (folder_id, profile_id) VALUES (?, ?)',
+                                [folderId, profileId]
+                            );
+                        }
+                        hideLoading();
+                        showStatusMessage('Profile saved successfully');
+                        loadSavedProfiles();
+                    }, (error) => {
+                        console.error('Error saving profile:', error);
+                        hideLoading();
+                        showStatusMessage('Failed to save profile');
+                    });
+                }
+            },
+            (error) => {
+                console.error('Error checking profile:', error);
+                hideLoading();
+                showStatusMessage('Error checking profile');
             }
-
-            hideLoading();
-            showStatusMessage('Profile saved successfully');
-            loadSavedProfiles();
-        });
-    }, (error) => {
-        console.error('Error saving profile:', error);
-        hideLoading();
-        showStatusMessage('Failed to save profile');
+        );
     });
 }
 
@@ -472,11 +640,17 @@ function createSavedCard(profile) {
                 </svg>
             </button>
             <div class="card-menu-dropdown hidden">
-                <button class="share-action" onclick="event.stopPropagation(); shareGitHubProfile('${profile.username}')">
+                    <button class="share-action" onclick="event.stopPropagation(); shareGitHubProfile('${profile.username}')">                    
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="action-icon">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
                     Share
+                </button>
+                <button class="folder-action" onclick="event.stopPropagation(); openFolderModal(${profile.id})">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="action-icon">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                    Add to Folder
                 </button>
                 <button class="delete-action" onclick="event.stopPropagation(); deleteProfile(${profile.id})">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="action-icon">
@@ -575,7 +749,6 @@ function showRepositories(username, page = 1) {
     fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=${perPage}&page=${page}`)
         .then(response => {
             if (!response.ok) throw new Error('Failed to fetch repositories');
-            // Get total count from header if available
             const linkHeader = response.headers.get('Link');
             if (linkHeader) {
                 totalPages = parseLinkHeader(linkHeader);
@@ -583,7 +756,6 @@ function showRepositories(username, page = 1) {
             return response.json();
         })
         .then(repos => {
-            // Create and show the details card
             const detailsContent = createReposList(repos, username);
             showDetailsCard('Repositories', detailsContent);
             hideLoading();
@@ -766,7 +938,7 @@ function createReposList(repos, username) {
 
 async function getMostUsedLanguage(username) {
     try {
-        const response = await fetch(`https://api.github.com/users/${username}/repos?per_page=100`);
+        const response = await fetch(`https://api.github.com/users/${username}/repos?per_page=30`);
         if (!response.ok) throw new Error('Failed to fetch repos');
 
         const repos = await response.json();
@@ -803,43 +975,23 @@ function createUsersList(users, type, username) {
                     <a href="${user.html_url}" target="_blank" class="github-link" onclick="event.stopPropagation();">Visit GitHub</a>
                     <div class="user-lang" id="lang-${user.login}">Loading language...</div>
                 </div>
-
             `).join('')}
         </div>
         ${createPaginationControls(currentPage, totalPages, username)}
     `;
 
-    // Delay updating language info to ensure DOM is ready
+    // Load languages with throttling
     setTimeout(() => {
         users.forEach((user, index) => {
             const langElem = document.getElementById(`lang-${user.login}`);
             if (!langElem) return;
-    
-            setTimeout(async () => {
-                // Check sessionStorage first
-                const cachedLangs = sessionStorage.getItem(`langs_${user.login}`);
-                if (cachedLangs) {
-                    const parsedLangs = JSON.parse(cachedLangs);
-                    langElem.innerHTML = formatLanguageList(user.login, parsedLangs);
-                    return;
-                }
-            
-                // Check in-memory cache
-                if (languageCache[user.login]) {
-                    langElem.innerHTML = formatLanguageList(user.login, languageCache[user.login]);
-                    return;
-                }
-            
-                // Fetch top languages from GitHub API
-                const topLangs = await getTopLanguages(user.login);
-                languageCache[user.login] = topLangs;
-                sessionStorage.setItem(`langs_${user.login}`, JSON.stringify(topLangs));  // Save to session
-            
+
+            apiQueue.enqueue(() => getTopLanguages(user.login)).then(topLangs => {
                 langElem.innerHTML = formatLanguageList(user.login, topLangs);
-            }, index * 300);  // Stagger delay
+            });
         });
     }, 100);
-    
+
     return userCardsHTML;
 }
 
@@ -947,9 +1099,53 @@ function getLanguageColor(language) {
     
     return colors[language] || '#8257e5'; // Default purple color
 }
+
 async function getTopLanguages(username) {
+    // Check in-memory cache first
+    if (languageCache[username]) {
+        return languageCache[username];
+    }
+
+    // Check SQLite cache
+    return new Promise((resolve) => {
+        db.transaction((tx) => {
+            tx.executeSql(
+                'SELECT languages, last_updated FROM user_languages WHERE username = ?',
+                [username],
+                (tx, results) => {
+                    if (results.rows.length > 0) {
+                        const { languages, last_updated } = results.rows.item(0);
+                        const age = Date.now() - new Date(last_updated).getTime();
+                        const cacheTTL = 24 * 60 * 60 * 1000; // 24-hour cache TTL
+                        if (age < cacheTTL) {
+                            const cachedLangs = JSON.parse(languages);
+                            languageCache[username] = cachedLangs; // Update in-memory cache
+                            resolve(cachedLangs);
+                            return;
+                        }
+                    }
+                    // Cache miss or expired, fetch from API
+                    fetchLanguagesFromAPI(username).then(langs => resolve(langs));
+                },
+                (error) => {
+                    console.error('Error querying user_languages:', error);
+                    fetchLanguagesFromAPI(username).then(langs => resolve(langs));
+                }
+            );
+        });
+    });
+}
+
+async function fetchLanguagesFromAPI(username) {
+    if (apiPaused) {
+        console.log(`API paused for ${username} due to rate limit`);
+        return [];
+    }
+
     try {
-        const response = await fetch(`https://api.github.com/users/${username}/repos?per_page=100`);
+        const response = await fetch(`https://api.github.com/users/${username}/repos?per_page=30`, {
+            headers: localStorage.getItem('github_oauth_token') ? { 'Authorization': `token ${localStorage.getItem('github_oauth_token')}` } : {}
+        });
         if (!response.ok) throw new Error('Failed to fetch repos');
 
         const repos = await response.json();
@@ -961,19 +1157,24 @@ async function getTopLanguages(username) {
             }
         });
 
-        // Sort by most used languages
         const sortedLanguages = Object.entries(languageCount)
-            .sort((a, b) => b[1] - a[1])  // Descending by count
-            .slice(0, 3);  // Top 3 only
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3);
 
-        return sortedLanguages;  // Example: [['JavaScript', 5], ['Python', 3], ['HTML', 2]]
+        db.transaction((tx) => {
+            tx.executeSql(
+                'INSERT OR REPLACE INTO user_languages (username, languages) VALUES (?, ?)',
+                [username, JSON.stringify(sortedLanguages)]
+            );
+        });
+
+        languageCache[username] = sortedLanguages;
+        return sortedLanguages;
     } catch (error) {
         console.error(`Error fetching top languages for ${username}:`, error);
         return [];
     }
 }
-
-
 
 // Global variable to track if an alert is currently showing
 let alertIsVisible = false;
@@ -2150,56 +2351,71 @@ function initializeRepositoryInteractions() {
     }
 }
 
+let apiPaused = false;
+
 function monitorRateLimit() {
     const rateLimitAlert = document.getElementById('rateLimitAlert') || createRateLimitAlert();
 
     function checkLimit() {
-        fetch('https://api.github.com/rate_limit')
-            .then(res => res.json())
-            .then(data => {
-                const remaining = data.rate.remaining;
-                const limit = data.rate.limit;
+        fetch('https://api.github.com/rate_limit', {
+            headers: localStorage.getItem('github_oauth_token') ? { 'Authorization': `token ${localStorage.getItem('github_oauth_token')}` } : {}
+        })
+        .then(res => res.json())
+        .then(data => {
+            const remaining = data.rate.remaining;
+            const limit = data.rate.limit;
+            const resetTime = new Date(data.rate.reset * 1000); // Unix timestamp to JS Date
 
-                const badge = document.getElementById('rateLimitBadge');
-                if (badge) {
-                    badge.textContent = `Rate Limit: ${remaining}/${limit}`;
-                    badge.classList.add('active');
-                }
+            const badge = document.getElementById('rateLimitBadge');
+            if (badge) {
+                badge.textContent = `Rate Limit: ${remaining}/${limit}`;
+                badge.classList.add('active');
+            }
 
-                if (remaining === 0) {
-                    // Rate limit hit – disable stuff
-                    rateLimitAlert.classList.add('active');
-                    rateLimitAlert.textContent = '⚠️ GitHub API Rate Limit Hit!';
-                    disableApiElements(true);
-                } else {
-                    // Rate limit free – enable stuff
-                    rateLimitAlert.classList.remove('active');
-                    rateLimitAlert.textContent = '';
-                    disableApiElements(false);
-                }
-            })
-            .catch(err => {
-                console.error('Rate limit check error:', err);
-            });
+            if (remaining < 10) { // Pause at 10 requests remaining
+                apiPaused = true;
+                rateLimitAlert.classList.add('active');
+                rateLimitAlert.textContent = `⚠️ API Rate Limit Low! Resets at ${resetTime.toLocaleTimeString()}`;
+                disableApiElements(true);
+            } else if (remaining === 0) {
+                apiPaused = true;
+                rateLimitAlert.textContent = `⚠️ API Rate Limit Exhausted! Resets at ${resetTime.toLocaleTimeString()}`;
+            } else {
+                apiPaused = false;
+                rateLimitAlert.classList.remove('active');
+                rateLimitAlert.textContent = '';
+                disableApiElements(false);
+            }
+        })
+        .catch(err => {
+            console.error('Rate limit check error:', err);
+        });
     }
 
-    // Initial check + every 1 min
     checkLimit();
-    setInterval(checkLimit, 60000);
+    setInterval(checkLimit, 30000); // Check every 30 seconds
 }
 
 function disableApiElements(disable) {
-    const apiButtons = document.querySelectorAll('#searchButton, .stat-item');  // Add selectors for your API-related buttons
+    const apiButtons = document.querySelectorAll('#searchButton, .stat-item');
     apiButtons.forEach(btn => {
-        if (disable) {
-            btn.classList.add('disabled');
-            btn.disabled = true;
-        } else {
-            btn.classList.remove('disabled');
-            btn.disabled = false;
-        }
+        btn.classList.toggle('disabled', disable);
+        btn.disabled = disable;
     });
 }
+
+// function disableApiElements(disable) {
+//     const apiButtons = document.querySelectorAll('#searchButton, .stat-item');  // Add selectors for your API-related buttons
+//     apiButtons.forEach(btn => {
+//         if (disable) {
+//             btn.classList.add('disabled');
+//             btn.disabled = true;
+//         } else {
+//             btn.classList.remove('disabled');
+//             btn.disabled = false;
+//         }
+//     });
+// }
 
 
 // Create alert banner if it doesn't exist
@@ -2332,10 +2548,8 @@ function loadSavedFolders() {
             }
 
             let folderHTML = '<div class="folder-container">';
-
             const totalFolders = results.rows.length;
 
-            // Loop through folders
             for (let i = 0; i < totalFolders; i++) {
                 const folder = results.rows.item(i);
                 const folderId = folder.id;
@@ -2344,7 +2558,6 @@ function loadSavedFolders() {
                 tx.executeSql(`SELECT profile_image FROM github_profiles 
                     JOIN folder_profiles ON github_profiles.id = folder_profiles.profile_id 
                     WHERE folder_profiles.folder_id = ? LIMIT 4`, [folderId], (tx, profileResults) => {
-
                     let avatarsHTML = '';
                     for (let j = 0; j < profileResults.rows.length; j++) {
                         const avatar = profileResults.rows.item(j).profile_image;
@@ -2356,26 +2569,48 @@ function loadSavedFolders() {
                             <div class="avatar-container">${avatarsHTML}</div>
                             <div class="folder-name">${folderName}</div>
                             <div class="dropdown">
-                                <button class="dropbtn">⋮</button>
-                                <div class="dropdown-content">
-                                    <a href="#" onclick="deleteFolder(event, ${folderId})">Delete</a>
-                                    <a href="#" onclick="shareFolder(event, ${folderId})">Share</a>
+                                <button class="dropbtn" onclick="event.stopPropagation(); toggleFolderMenu(this)">⋮</button>
+                                <div class="dropdown-content hidden">
+                                    <a href="#" onclick="event.stopPropagation(); deleteFolder(event, ${folderId})">Delete</a>
+                                    <a href="#" onclick="event.stopPropagation(); shareFolder(event, ${folderId})">Share</a>
                                 </div>
                             </div>
                         </div>
                     `;
 
-                    // Inject after final folder processed
+                    // Inject HTML after the final folder is processed
                     if (i === totalFolders - 1) {
                         folderHTML += '</div>';
                         showDetailsCard('Saved Folders', folderHTML);
                     }
+                }, (error) => {
+                    console.error('Error fetching profile images for folder:', error);
+                    showStatusMessage('Error loading folder contents');
                 });
             }
+        }, (error) => {
+            console.error('Error fetching folders:', error);
+            showStatusMessage('Error loading folders');
         });
     });
 }
 
+function toggleFolderMenu(button) {
+    const dropdown = button.nextElementSibling;
+    dropdown.classList.toggle('hidden');
+    
+    document.querySelectorAll('.dropdown-content').forEach(d => {
+        if (d !== dropdown) d.classList.add('hidden');
+    });
+    
+    setTimeout(() => {
+        document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target) && e.target !== button) {
+                dropdown.classList.add('hidden');
+            }
+        }, { once: true });
+    }, 0);
+}
 
 function viewFolderProfiles(folderId, folderName) {
     db.transaction(tx => {
@@ -2388,19 +2623,34 @@ function viewFolderProfiles(folderId, folderName) {
                 return;
             }
 
-            let profilesHTML = '';
+            let profilesHTML = '<div class="folder-container">';
             for (let i = 0; i < results.rows.length; i++) {
                 const profile = results.rows.item(i);
                 profilesHTML += `
-                    <div class="folder-profile-item">
-                        <img src="${profile.profile_image}" alt="${profile.username}">
-                        <h3>${profile.username}</h3>
-                        <a class="github-link" href="https://github.com/${profile.username}" target="_blank">Visit GitHub</a>
-                        <button class="action-button danger" onclick="removeUserFromFolder(${profile.id}, ${folderId});">Remove</button>
+                    <div class="folder-profile-item" onclick="showRepositories('${profile.username}')">
+                        <div class="profile-info">
+                            <img src="${profile.profile_image}" alt="${profile.username}">
+                            <h3>${profile.username}</h3>
+                        </div>
+                        <div class="profile-actions">
+                            <a class="github-link" href="https://github.com/${profile.username}" target="_blank" onclick="event.stopPropagation();">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                    <polyline points="15 3 21 3 21 9"></polyline>
+                                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                                </svg>
+                                Visit
+                            </a>
+                            <button class="action-button danger" onclick="event.stopPropagation(); removeUserFromFolder(${profile.id}, ${folderId});">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 `;
             }
-
+            profilesHTML += '</div>';
             showDetailsCard(`Profiles in "${folderName}"`, profilesHTML);
         });
     });
@@ -2418,15 +2668,41 @@ function removeUserFromFolder(profileId, folderId) {
 
 function deleteFolder(event, folderId) {
     event.stopPropagation();
-    if (confirm("Delete this folder?")) {
+    showCustomAlert('Are you sure you want to delete this folder?', function() {
         db.transaction(tx => {
             tx.executeSql('DELETE FROM profile_folders WHERE id = ?', [folderId]);
-            tx.executeSql('DELETE FROM folder_profiles WHERE folder_id = ?', [folderId], () => {
-                loadSavedFolders();
+            tx.executeSql('DELETE FROM folder_profiles WHERE folder_id = ?', [folderId], (tx, results) => {
+                const detailsCard = document.getElementById('detailsCard');
+                if (detailsCard) {
+                    // Regardless of context, fade out and remove the current details card
+                    detailsCard.style.transition = 'opacity 0.3s ease';
+                    detailsCard.style.opacity = '0';
+                    setTimeout(() => {
+                        detailsCard.remove();
+                        // If in folder list view, remove the specific folder card
+                        const folderCard = document.querySelector(`.folder-card[onclick="viewFolderProfiles(${folderId}, '${document.querySelector('.folder-name')?.textContent || ''}')"]`);
+                        if (folderCard) {
+                            folderCard.style.transition = 'opacity 0.3s ease';
+                            folderCard.style.opacity = '0';
+                            setTimeout(() => {
+                                folderCard.remove();
+                                const folderContainer = document.querySelector('.folder-container');
+                                if (folderContainer && folderContainer.children.length === 0) {
+                                    folderContainer.innerHTML = '<p style="text-align: center; color: var(--gray); grid-column: 1/-1; padding: 2rem 1rem;">No folders created yet.</p>';
+                                }
+                            }, 300);
+                        }
+                        // Reload folder list to ensure consistency
+                        loadSavedFolders();
+                    }, 300);
+                }
                 showStatusMessage('Folder deleted');
+            }, (error) => {
+                console.error('Error deleting folder:', error);
+                showStatusMessage('Error deleting folder');
             });
         });
-    }
+    });
 }
 
 function shareFolder(event, folderId) {
