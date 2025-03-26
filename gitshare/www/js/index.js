@@ -280,14 +280,15 @@ async function verifyImageURL(url) {
 
 function saveGitHubProfile() {
     // Ask user how they want to save
-    const saveOption = confirm("Do you want to save this profile into a folder?\nClick 'OK' for Folder, 'Cancel' for Normal Save.");
-    if (saveOption) {
-        // Save to folder
-        openFolderModal();
-    } else {
-        // Normal save
-        finalizeProfileSave(null);
-    }
+    // const saveOption = confirm("Do you want to save this profile into a folder?\nClick 'OK' for Folder, 'Cancel' for Normal Save.");
+    // if (saveOption) {
+    //     // Save to folder
+    //     openFolderModal();
+    // } else {
+    //     // Normal save
+    //     finalizeProfileSave(null);
+    // }
+    finalizeProfileSave(null);
 }
 
 function openFolderModal(profileId) {
@@ -451,34 +452,17 @@ function finalizeProfileSave(folderId) {
             [profile.username],
             (tx, results) => {
                 if (results.rows.length > 0) {
-                    // Profile already exists
-                    const profileId = results.rows.item(0).id;
-                    if (folderId) {
-                        // If saving to a folder, link existing profile
-                        tx.executeSql(
-                            'INSERT OR IGNORE INTO folder_profiles (folder_id, profile_id) VALUES (?, ?)',
-                            [folderId, profileId],
-                            () => {
-                                hideLoading();
-                                showStatusMessage('Profile already saved, linked to folder');
-                                loadSavedProfiles();
-                            },
-                            (error) => {
-                                console.error('Error linking to folder:', error);
-                                hideLoading();
-                                showStatusMessage('Failed to link to folder');
-                            }
-                        );
-                    } else {
-                        hideLoading();
-                        showStatusMessage('Profile already saved');
-                    }
-                } else {
-                    // Insert new profile
-                    tx.executeSql(`
-                        INSERT INTO github_profiles (username, name, bio, followers, following, repos, location, website, profile_image)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `, [
+                    hideLoading();
+                    showStatusMessage('Profile already saved.');
+                    document.getElementById('saveProfile').style.display = 'none'; // Hide save button immediately
+                    return;
+                }
+
+                // Insert new profile
+                tx.executeSql(
+                    `INSERT INTO github_profiles (username, name, bio, followers, following, repos, location, website, profile_image) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
                         profile.username,
                         profile.name,
                         profile.bio,
@@ -488,32 +472,29 @@ function finalizeProfileSave(folderId) {
                         profile.location,
                         profile.website,
                         profile.profile_image
-                    ], (tx, results) => {
-                        const profileId = results.insertId;
-                        if (folderId) {
-                            tx.executeSql(
-                                'INSERT INTO folder_profiles (folder_id, profile_id) VALUES (?, ?)',
-                                [folderId, profileId]
-                            );
-                        }
+                    ],
+                    (tx, results) => {
                         hideLoading();
-                        showStatusMessage('Profile saved successfully');
-                        loadSavedProfiles();
-                    }, (error) => {
+                        showStatusMessage('Profile saved successfully.');
+                        document.getElementById('saveProfile').style.display = 'none'; // Hide save button immediately
+                        loadSavedProfiles(); // Refresh list
+                    },
+                    (error) => {
                         console.error('Error saving profile:', error);
                         hideLoading();
-                        showStatusMessage('Failed to save profile');
-                    });
-                }
+                        showStatusMessage('Failed to save profile.');
+                    }
+                );
             },
             (error) => {
                 console.error('Error checking profile:', error);
                 hideLoading();
-                showStatusMessage('Error checking profile');
+                showStatusMessage('Error checking profile.');
             }
         );
     });
 }
+
 
 
 // Delete a saved profile
